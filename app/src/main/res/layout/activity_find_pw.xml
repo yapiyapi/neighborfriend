@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="32dp"
+    tools:context=".Activity_Find_pw">
+
+<!--    상단-->
+
+    <ImageView
+        android:id="@+id/back_btn_find_pw"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/back_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/title_find_pw"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="비밀번호 찾기"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toStartOf="@+id/Next_find_pw"
+        app:layout_constraintStart_toEndOf="@+id/back_btn_find_pw"
+        app:layout_constraintTop_toTopOf="@+id/back_btn_find_pw" />
+
+    <TextView
+        android:id="@+id/Next_find_pw"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="다음"
+        android:textColor="@color/neighborfriend"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@+id/title_find_pw"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+    <!--    아이디 입력-->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout3"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="180dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/title_find_pw">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/text_find_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="아이디를 입력해주세요."
+            android:inputType="text"
+            android:privateImeOptions="defaultInputmode=english;" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+    <!--    휴대폰번호 입력-->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout4"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textInputLayout3">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/text_find_nickname"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="닉네임을 입력해주세요."
+            android:inputType="text"
+            android:privateImeOptions="defaultInputmode=korean;" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:id="@+id/linearLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textInputLayout4">
+
+        <TextView
+            android:id="@+id/text_phoneNum_certi"
+            android:layout_width="220dp"
+            android:layout_height="wrap_content"
+            android:text="휴대폰번호 인증"
+            android:textColor="@color/gray"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/nickname_signup" />
+        <!--                체크표시-->
+        <ImageView
+            android:id="@+id/imageView_check"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:scaleType="centerInside"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="@+id/button_certi"
+            app:layout_constraintEnd_toStartOf="@+id/button_certi"
+            app:layout_constraintTop_toTopOf="@+id/button_certi"
+            app:srcCompat="@drawable/check_icon" />
+        <!--                인증버튼-->
+        <Button
+            android:id="@+id/button_certi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="인증" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

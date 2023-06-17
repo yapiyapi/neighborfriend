@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="32dp"
+    tools:context=".Activity_Find_pw_change">
+
+
+    <!--    상단-->
+    <ImageView
+        android:id="@+id/back_btn_changePw"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/back_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/title_changePw"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="비밀번호 재설정"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toStartOf="@+id/Tochange_changePw"
+        app:layout_constraintStart_toEndOf="@+id/back_btn_changePw"
+        app:layout_constraintTop_toTopOf="@+id/back_btn_changePw" />
+
+    <TextView
+        android:id="@+id/Tochange_changePw"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="재설정"
+        android:textColor="@color/neighborfriend"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@+id/title_changePw"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+
+    <!--   새 비밀번호 입력-->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout3"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.39"
+        app:passwordToggleEnabled="true">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/text_newPw"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="새 비밀번호"
+            android:inputType="textPassword" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!--    비밀번호 확인-->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout4"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.51"
+        app:passwordToggleEnabled="true">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/text_newPwCh"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="새 비밀번호 확인"
+            android:inputType="textPassword" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:id="@+id/newPw_error"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="숫자, 특수문자, 영어가 적어도 하나씩 포함"
+        android:textColor="#E40B0B"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@+id/textInputLayout3"
+        app:layout_constraintTop_toBottomOf="@+id/textInputLayout3" />
+
+    <TextView
+        android:id="@+id/newPwCh_error"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="비밀번호 확인을 다시 해주세요."
+        android:textColor="#E40B0B"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@+id/textInputLayout4"
+        app:layout_constraintTop_toBottomOf="@+id/textInputLayout4" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

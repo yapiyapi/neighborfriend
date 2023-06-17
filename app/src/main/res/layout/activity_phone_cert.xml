@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="32dp"
+    tools:context=".Activity_Phone_cert">
+
+
+    <!--    상단-->
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:text="휴대폰 번호\n인증을 진행합니다."
+        android:textColor="@color/black"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@id/textInputLayout3"
+        app:layout_constraintStart_toStartOf="@id/textInputLayout3"
+        app:layout_constraintTop_toBottomOf="@+id/back_btn_phone_cert" />
+
+    <ImageView
+        android:id="@+id/back_btn_phone_cert"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/back_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/title_phone_cert"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="휴대폰 번호 인증"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toStartOf="@+id/Tocert_phone_cert"
+        app:layout_constraintStart_toEndOf="@+id/back_btn_phone_cert"
+        app:layout_constraintTop_toTopOf="@+id/back_btn_phone_cert" />
+
+    <TextView
+        android:id="@+id/Tocert_phone_cert"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="인증"
+        android:textColor="@color/neighborfriend"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@+id/title_phone_cert"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+    <!--    아이디 입력-->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout3"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="250dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.39">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/text_phone_cert_phone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="휴대폰 번호( -없이 숫자만 입력)"
+            android:inputType="phone" />
+    </com.google.android.material.textfield.TextInputLayout>
+    <!--    휴대폰 번호 입력-->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout4"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.51">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/text_phone_cert_certNum"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="인증번호를 입력해주세요."
+            android:inputType="number" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+
+    <!-- ____________  버튼-->
+    <Button
+        android:id="@+id/button_phone_cert_send"
+        android:layout_width="70dp"
+        android:layout_height="65dp"
+        android:text="전송"
+        app:layout_constraintBottom_toBottomOf="@+id/textInputLayout3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/textInputLayout3" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
