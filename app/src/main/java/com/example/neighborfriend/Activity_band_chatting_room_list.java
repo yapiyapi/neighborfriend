@@ -48,7 +48,10 @@ import retrofit2.Response;
 
 public class Activity_band_chatting_room_list extends AppCompatActivity {
     private ActivityBandChattingRoomListBinding binding;
-    /**  SharedPreferences **/ SharedPreferences userData;
+    /**
+     * SharedPreferences
+     **/
+    SharedPreferences userData;
     /**
      * Service
      **/
@@ -60,21 +63,15 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
     Adapter_chattingList 어댑터;
     LinearLayoutManager 레이아웃매니저;
 
-
-//    /** 추가 **/
-//    private ServiceChattingConnection serviceConnection;
-//    private Service_chatting service;
-//    private boolean isServiceBound = false;
-//    /** 추가 **/
-
-    private RecyclerView recy; private ImageView backBtn,plusBtn; private TextView title_view;
+    private RecyclerView recy;
+    private ImageView backBtn, plusBtn;
+    private TextView title_view;
     private String currentId;
     ArrayList<chattingRoom> chatRoom_list;
-    private String user_id,thumnail_uri,title,introduction,updated_at,created_at;
-    private int seq,band_seq,room_type;
 
     private int 채팅방종류;
     private int 밴드번호;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -129,17 +126,20 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
 
         /** 초기화 **/
         chatRoom_list = new ArrayList<>();
-        채팅방종류 =-1;
+        채팅방종류 = -1;
         recy.setItemAnimator(null);
 
-        Retrofit(밴드번호,currentId);
+        /** recyclerView 생성 **/
+        Retrofit채팅방정보가져오기(밴드번호, currentId);
     }
 
-    /** Http 통신 **/
-    private void Retrofit(int band_seq_get, String user_id) {
+    /**
+     * Http 통신
+     **/
+    private void Retrofit채팅방정보가져오기(int band_seq_get, String user_id) {
         /***********************  채팅방 정보 가져오기  ***************************/
         retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
-        Call<ArrayList<chattingRoom>> call1 = retrofitAPI.readChatRoom(band_seq_get,user_id);
+        Call<ArrayList<chattingRoom>> call1 = retrofitAPI.readChatRoom(band_seq_get, user_id);
         call1.enqueue(new Callback<ArrayList<chattingRoom>>() {
             @Override
             public void onResponse(@NotNull Call<ArrayList<chattingRoom>> call, @NotNull Response<ArrayList<chattingRoom>> response) {
@@ -147,53 +147,39 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     List<chattingRoom> chattingRoomList = response.body();
 
+
                     for (int i = 0; i < chattingRoomList.size(); i++) {
 
-                        // 종류 바뀔 때마다 카테고리 추가
-                        if (채팅방종류 != chattingRoomList.get(i).getIsMine()){
+                        /** 카테고리 **/
+                        if (채팅방종류 != chattingRoomList.get(i).getIsMine()) {
                             채팅방종류 = chattingRoomList.get(i).getIsMine();
                             chattingRoom chattingRoom_1 = new chattingRoom();
                             chattingRoom_1.setViewType(0);
                             if (채팅방종류 == 1) {
                                 chattingRoom_1.setTxt_contents("내 채팅");
-                            }else{
+                            } else {
                                 chattingRoom_1.setTxt_contents("참여할 수 있는 공개채팅방");
                             }
                             chatRoom_list.add(chattingRoom_1);
                         }
 
-                        // home_cell 초기화 -------------------------------
-                        chattingRoom chattingRoom_2 = new chattingRoom();
-
-                        chattingRoom_2.setSeq(chattingRoomList.get(i).getSeq());
-                        chattingRoom_2.setBand_seq(chattingRoomList.get(i).getBand_seq());
-                        chattingRoom_2.setUser_id(chattingRoomList.get(i).getUser_id());
-                        chattingRoom_2.setThumnail(chattingRoomList.get(i).getThumnail());
-                        chattingRoom_2.setTitle(chattingRoomList.get(i).getTitle());
-                        chattingRoom_2.setIntroduction(chattingRoomList.get(i).getIntroduction());
-                        chattingRoom_2.setRoom_type(chattingRoomList.get(i).getRoom_type());
-                        chattingRoom_2.setCreated_at(chattingRoomList.get(i).getCreated_at());
-                        chattingRoom_2.setMember(chattingRoomList.get(i).getMember());
-
-                        // 마지막 메세지 정보 (null 가능)
-                        chattingRoom_2.setTxt_contents(chattingRoomList.get(i).getTxt_contents());
-                        chattingRoom_2.setMsg_type(chattingRoomList.get(i).getMsg_type());
-                        if (chattingRoomList.get(i).getMsg_created_at()==null) chattingRoom_2.setMsg_created_at(null);
-                        else chattingRoom_2.setMsg_created_at( 시간포맷(chattingRoomList.get(i).getMsg_created_at()));
-                        chattingRoom_2.setIsMine(chattingRoomList.get(i).getIsMine());
-
-                        chattingRoom_2.setViewType(1);
+                        /** 채팅방 **/
+                        // 마지막 채팅 시간
+                        if (chattingRoomList.get(i).getMsg_created_at() == null)
+                            chattingRoomList.get(i).setMsg_created_at(null);
+                        else
+                            chattingRoomList.get(i).setMsg_created_at(시간포맷(chattingRoomList.get(i).getMsg_created_at()));
+                        // 0: 카테고리/ 1: 채팅방정보
+                        chattingRoomList.get(i).setViewType(1);
                         // --------------------------------------------------------------
 
-
-
-                        chatRoom_list.add(chattingRoom_2);
+                        chatRoom_list.add(chattingRoomList.get(i));
 
                     }
 
                     /** 어댑터 연결 **/
                     레이아웃매니저 = new LinearLayoutManager(Activity_band_chatting_room_list.this);
-                    어댑터 = new Adapter_chattingList(chatRoom_list,0);
+                    어댑터 = new Adapter_chattingList(chatRoom_list, 0);
                     recy.setLayoutManager(레이아웃매니저);
                     recy.setAdapter(어댑터);
 
@@ -209,7 +195,7 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
                             intent.putExtra("thumnail_uri", thumnail_uri);
                             intent.putExtra("title", title);
                             intent.putExtra("intro", intro);
-                            intent.putExtra("isMine",isMine);
+                            intent.putExtra("isMine", isMine);
 
                             Retrofit채팅방멤버추가(currentId, 채팅방_seq);
 
@@ -233,23 +219,23 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call<ArrayList<chattingRoom>> call, @NonNull Throwable t) {
                 Toast.makeText(Activity_band_chatting_room_list.this, t.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                Log.i("Activity_band_chatting_room_err", t.getLocalizedMessage());
+                Log.i("Activity_band_chatting_room_list_err", t.getLocalizedMessage());
             }
         });
     }
 
     private void Retrofit채팅방멤버추가(String user_id, int chatRoom_seq) {
-        /***********************  채팅방 정보 가져오기  ***************************/
+        /***********************  채팅방 멤버 추가  ***************************/
         retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
-        Call<String> call1 = retrofitAPI.createMember(user_id,chatRoom_seq);
+        Call<String> call1 = retrofitAPI.createMember(user_id, chatRoom_seq);
         call1.enqueue(new Callback<String>() {
             @Override
             public void onResponse(@NotNull Call<String> call, @NotNull Response<String> response) {
                 // 서버에서 응답을 받아옴
                 if (response.isSuccessful() && response.body() != null) {
-                    if(response.body().equals("2")){
+                    if (response.body().equals("2")) {
                         Toast.makeText(Activity_band_chatting_room_list.this, "멤버 추가 성공", Toast.LENGTH_SHORT).show();
-                    }else if (response.body().equals("0"))
+                    } else if (response.body().equals("0"))
                         Toast.makeText(Activity_band_chatting_room_list.this, "멤버 추가 실패", Toast.LENGTH_SHORT).show();
                     else ;
                 } else {
@@ -268,7 +254,9 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
 
     }
 
-    /** 채팅방 추가 **/
+    /**
+     * 채팅방 추가 버튼 클릭 이벤트
+     **/
     private void showCustomMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
@@ -298,8 +286,9 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
     }
 
 
-    /** ServiceConnection **/
-
+    /**
+     * ServiceConnection
+     **/
     ServiceConnection conn = new ServiceConnection() {
         public void onServiceConnected(ComponentName name,
                                        IBinder service) {
@@ -328,11 +317,9 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
             try {
                 jsonMessage = new JSONObject(chatMessage);
 
+
+                int band_seq = Integer.parseInt(jsonMessage.optString("band_seq"));
                 int chatRoom_seq = Integer.parseInt(jsonMessage.optString("chatRoom_seq"));
-
-//                        String seq = jsonMessage.optString("seq");
-                // 혹시나 storage 저장할 때 필요할지도
-
                 String user_id = jsonMessage.optString("user_id");
                 String nickname = jsonMessage.optString("nickname");
                 String txt_contents = jsonMessage.optString("txt_contents");
@@ -340,50 +327,55 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
                 int msg_type = Integer.parseInt(jsonMessage.optString("msg_type"));
                 String msg_created_at = jsonMessage.optString("msg_created_at");
 
-
-                if(msg_type==3 && (txt_contents.equals("채팅방입장") ||
+                if (msg_type == 3 && (txt_contents.equals("채팅방입장") ||
                         txt_contents.equals("채팅방나가기") ||
-                        txt_contents.equals("채팅방삭제")));
-                else{
+                        txt_contents.equals("로그아웃"))) ;
+                else if (msg_type == 4) {
+                    // 채팅방 (공개/비공개) 생성 시
+                    chatRoom_list.clear();
+                    /** recyclerView 생성 **/
+                    Retrofit채팅방정보가져오기(밴드번호, currentId);
+                } else {
                     // 해당 채팅방 찾아서
                     // 채팅메세지, 채팅메세지 시간, 읽음표시 수정
                     for (int i = 0; i < chatRoom_list.size(); i++) {
-                        if(chatRoom_list.get(i).getSeq()==chatRoom_seq){
+                        if (chatRoom_list.get(i).getSeq() == chatRoom_seq) {
                             chattingRoom chattingRoom = new chattingRoom();
 
                             chattingRoom = chatRoom_list.get(i);
 
-                            if(msg_type==3 && txt_contents.equals("채팅방최초입장")){
-                                어댑터.updateItemSpecial(i,1);
-                                break;
-                            }else if (msg_type==3 && txt_contents.equals("채팅방탈퇴")) {
-                                어댑터.updateItemSpecial(i, -1);
-                                break;
-                            }else {
+                            if (msg_type == 3) {
+                                if (txt_contents.equals("채팅방최초입장")) {
+                                    어댑터.updateItemSpecial(i, 1);
+                                    break;
+                                } else if (txt_contents.equals("채팅방퇴장")) {
+                                    어댑터.updateItemSpecial(i, -1);
+                                    break;
+                                } else if (txt_contents.equals("채팅방삭제")){
+                                    chatRoom_list.remove(i);
+                                    어댑터.deleteItem(i);
+                                }
 
+                            } else {
+
+                                // 마지막 채팅
                                 if (msg_type == 1) chattingRoom.setTxt_contents("사진을 보냈습니다.");
                                 else if (msg_type == 2) chattingRoom.setTxt_contents("동영상을 보냈습니다.");
-                                else  chattingRoom.setTxt_contents(txt_contents);
+                                else chattingRoom.setTxt_contents(txt_contents);
 
-
-                                // 읽음 표시
-//                        chattingRoom.set(txt_contents);
+                                // 읽음 표시 +1
+                                if (chatRoom_list.get(i).getIsMine() == 1) {// 내 채팅
+                                    chattingRoom.setUnreadNum(chattingRoom.getUnreadNum() + 1);
+                                }
+                                // 마지막 채팅 시간
                                 chattingRoom.setMsg_created_at(시간포맷(msg_created_at));
 
-                                어댑터.updateItem(i,chattingRoom);
+                                어댑터.updateItem(i, chattingRoom);
                                 break;
                             }
                         }
                     }
                 }
-
-//                System.out.println(chatRoom_seq);
-//                System.out.println(user_id);
-//                System.out.println(nickname);
-//                System.out.println(txt_contents);
-//                System.out.println(msg_uri);
-//                System.out.println(msg_type);
-//                System.out.println(msg_created_at);
 
 
             } catch (JSONException e) {
@@ -409,7 +401,6 @@ public class Activity_band_chatting_room_list extends AppCompatActivity {
         IntentFilter intentFilter = new IntentFilter("채팅");
         registerReceiver(chatReceiver, intentFilter);
     }
-
 
     @Override
     protected void onStop() {

@@ -29,16 +29,11 @@ public class HttpUrlConnetionClass {
             conn.setDoOutput(true);	// URL 연결을 출력용으로 사용(true)
 
             String requestBody = getJsonStringFromMap(requestMap);
-            System.out.println("requestBody:" + requestBody);
 
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
             bw.write(requestBody);
             bw.flush();
             bw.close();
-
-            System.out.println("getContentType():" + conn.getContentType()); // 응답 콘텐츠 유형 구하기
-            System.out.println("getResponseCode():"    + conn.getResponseCode()); // 응답 코드 구하기
-            System.out.println("getResponseMessage():" + conn.getResponseMessage()); // 응답 메시지 구하기
 
             Charset charset = Charset.forName("UTF-8");
             BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), charset));

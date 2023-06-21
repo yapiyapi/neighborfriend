@@ -46,6 +46,9 @@ public class chattingRoom {
     @Expose
     @SerializedName("isMine")
     private int isMine;
+    @Expose
+    @SerializedName("unreadNum")
+    private int unreadNum;
 
     private int viewType;
 
@@ -170,5 +173,13 @@ public class chattingRoom {
 
     public void setViewType(int viewType) {
         this.viewType = viewType;
+    }
+
+    public int getUnreadNum() {
+        return unreadNum;
+    }
+
+    public void setUnreadNum(int unreadNum) {
+        this.unreadNum = unreadNum;
     }
 }

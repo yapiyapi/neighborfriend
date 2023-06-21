@@ -239,9 +239,9 @@ public class Adapter_chatting extends RecyclerView.Adapter<RecyclerView.ViewHold
             } else { // vdo
                 ((loadingViewHolder) holder).imageView.setImageBitmap(createThumbnail(holder.itemView.getContext(), uri));
             }
-        } else { // 채팅방탈퇴, 채팅방최초입장
+        } else { // 채팅방퇴장, 채팅방최초입장
             String 닉네임 = chatting_list.get(position).getNickname();
-            if (chatting_list.get(position).getTxt_contents().equals("채팅방탈퇴")) {
+            if (chatting_list.get(position).getTxt_contents().equals("채팅방퇴장")) {
                 ((specialViewHolder) holder).txtSpec.setText(닉네임 + " 님이 나가셨습니다.");
             } else if (chatting_list.get(position).getTxt_contents().equals("채팅방최초입장")) {
                 ((specialViewHolder) holder).txtSpec.setText(닉네임 + " 님이 들어오셨습니다.");
@@ -440,7 +440,7 @@ public class Adapter_chatting extends RecyclerView.Adapter<RecyclerView.ViewHold
     }
 
     /**
-     * Special ( 채팅방탈퇴, 채팅방최초입장 ) ---------------------------------------------------------
+     * Special ( 채팅방퇴장, 채팅방최초입장 ) ---------------------------------------------------------
      **/
     public class specialViewHolder extends RecyclerView.ViewHolder {
         TextView txtSpec;
@@ -455,18 +455,16 @@ public class Adapter_chatting extends RecyclerView.Adapter<RecyclerView.ViewHold
      * 메서드
      **/
     public void addChat(chatting chatting1) {
-        chatting_list.add(chatting1);
-        notifyItemInserted(chatting_list.size() - 1);
+        chatting_list.add(0,chatting1);
+        notifyItemInserted(0);
     }
 
-    public void removeChat() {
-        chatting_list.remove(chatting_list.size() - 1);
-        notifyItemRemoved(chatting_list.size() - 1);
+    public void removeChat() { // 로딩 (이미지/ 동영상)
+        chatting_list.remove(0);
+        notifyItemRemoved(0);
     }
 
     public void updateChat(String 채팅방에있는멤버리스트_string) {
-
-
 
         채팅방에있는멤버리스트_string = 채팅방에있는멤버리스트_string.replace("\"","");
         //채팅방에있는멤버리스트 string to list

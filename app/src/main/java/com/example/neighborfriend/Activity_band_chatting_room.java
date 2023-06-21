@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -35,6 +36,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -90,6 +92,7 @@ public class Activity_band_chatting_room extends AppCompatActivity {
     private final int IMAGE = 1;
     private final int VIDEO = 2;
     private final int SPECIAL = 3;
+    private final int CREATE_ROOM = 4;
 
     /**
      * Network
@@ -125,8 +128,8 @@ public class Activity_band_chatting_room extends AppCompatActivity {
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
-    private EditText editMess;
-    private ImageView btnBack, imgMore, btnPlus, btnSend;
+    /** view **/
+    private EditText editMess; private ImageView btnBack, imgMore, btnPlus, btnSend;
     private TextView txtTitle;
     private RecyclerView recy;
     private int 밴드번호, 채팅방_seq, isMine;
@@ -135,6 +138,10 @@ public class Activity_band_chatting_room extends AppCompatActivity {
     ArrayList<chatting> chatting_list;
     Uri uri = null;
     String 이미지, 비디오;
+
+    // 페이징
+    int page = 1, limit = 20;
+    boolean isScrollEndReached = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,14 +160,12 @@ public class Activity_band_chatting_room extends AppCompatActivity {
             public void onClick(View v) {
                 // 소켓에 전달
                 System.out.println("여기는 뒤롭 ㅓ튼");
-                sendMessage(채팅방_seq, current_user_id, current_user_name,
+                sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                         SPECIAL, "채팅방나가기", null);
 
                 finish();
             }
         });
-
-
         // 이미지/비디오
         btnPlus.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -168,14 +173,13 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                 showCustomMenu(v, 0);
             }
         });
-
         // 전송 버튼
         btnSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String message = editMess.getText().toString();
                 if (!message.isEmpty()) {
-                    sendMessage(채팅방_seq, current_user_id, current_user_name,
+                    sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                             TEXT, message, null);
 
                     editMess.getText().clear();
@@ -191,6 +195,30 @@ public class Activity_band_chatting_room extends AppCompatActivity {
             }
         });
 
+        // 페이징 처리
+        recy.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                if (!recyclerView.canScrollVertically(-1)) {
+                    // Check if scroll end is already reached
+                    if (!isScrollEndReached) {
+                        isScrollEndReached = true; // Set the flag to true
+
+                        // Increment the page variable
+                        page++;
+                        System.out.println(page);
+                        Retrofit_getMsg(채팅방_seq, current_user_id, page, limit,false);
+                    }
+                } else {
+                    // Reset the flag if scrolled away from the bottom
+                    isScrollEndReached = false;
+                }
+            }
+        });
+
+
 
         /** 권한 **/
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -205,7 +233,7 @@ public class Activity_band_chatting_room extends AppCompatActivity {
         btnBack = binding.backBtnBandChat;
         txtTitle = binding.titleBandChat;
         imgMore = binding.imgThreedotBandChat;
-        /** 설정 **/
+        /** **/
         recy = binding.recyclerViewBandChat;
         btnPlus = binding.imgPlusImgVideo;
         editMess = binding.editMessage;
@@ -236,12 +264,17 @@ public class Activity_band_chatting_room extends AppCompatActivity {
 
         /** 초기화 **/
         chatting_list = new ArrayList<>();
-        recy.setItemAnimator(null);
+        recy.setItemAnimator(null); // 애니메이션 효과 제거
+
+        /** 어댑터 연결 **/
+        레이아웃매니저 = new LinearLayoutManager(Activity_band_chatting_room.this, LinearLayoutManager.VERTICAL, true);
+        어댑터 = new Adapter_chatting(chatting_list);
+        recy.setLayoutManager(레이아웃매니저);
+        recy.setAdapter(어댑터);
+
 
         // 채팅 내용 가져오기
-        Retrofit_getMsg(채팅방_seq, current_user_id);
-
-
+        Retrofit_getMsg(채팅방_seq, current_user_id, page, limit, true);
 
     }
 
@@ -261,7 +294,7 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                         // 권한
                         getContentResolver().takePersistableUriPermission(Uri.parse(이미지), Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
-                        sendMessage(채팅방_seq, current_user_id, current_user_name,
+                        sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                                 IMAGE, null, 이미지);
 
 
@@ -280,7 +313,7 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                         // 권한
                         getContentResolver().takePersistableUriPermission(Uri.parse(비디오), Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
-                        sendMessage(채팅방_seq, current_user_id, current_user_name,
+                        sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                                 VIDEO, null, 비디오);
 
                     }
@@ -292,15 +325,13 @@ public class Activity_band_chatting_room extends AppCompatActivity {
      * Http 통신
      **/
     // message 저장
-    private void Retrofit_createMsg(final int chatRoom_seq, String current_user_id,int msg_type,
+    private void Retrofit_createMsg(int band_seq, int chatRoom_seq, String current_user_id, int msg_type,
                                     String txt_contents, String msg_uri) {
-        if (msg_type != 3 || !(txt_contents.equals("채팅방입장") || txt_contents.equals("채팅방나가기"))) { // Special msg
+        if (msg_type != 3 || !(txt_contents.equals("채팅방입장") || txt_contents.equals("채팅방나가기") || txt_contents.equals("채팅방삭제"))) { // Special msg
 
             retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
             Call<String> call = retrofitAPI.createChat(chatRoom_seq, current_user_id,
                     txt_contents, msg_uri, msg_type);
-
-//            System.out.println( String.valueOf(unread_list).replace("[","").replace("]",""));
 
             call.enqueue(new Callback<String>() {
                 @Override
@@ -315,7 +346,7 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                             if (msg_type == IMAGE || msg_type == VIDEO) {
                                 // 이미지 , 동영상 firebase 업로드 로직
                                 String 경로 = String.format("chatRooms/%s/chatting/%s", chatRoom_seq, response.body());
-                                System.out.println("317");
+
                                 // storage 저장
                                 StorageReference imagesRef = FirebaseCloudStorage.Storage_img(경로);
                                 UploadTask uploadTask = imagesRef.putFile(Uri.parse(msg_uri));
@@ -324,10 +355,9 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                                     public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
                                         if (task.isSuccessful()) {
 
-                                            System.out.println("326");
                                             // 서비스에서 sendMessage
                                             if (isService && ServiceChat != null) {
-                                                ServiceChat.sendMessage(채팅방_seq, current_user_id, current_user_name,
+                                                ServiceChat.sendMessage(band_seq, chatRoom_seq, current_user_id, current_user_name,
                                                         msg_type, txt_contents, 경로);
                                             }
 
@@ -337,17 +367,15 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                                     }
                                 });
                             } else {
-                                System.out.println("339");
                                 // 서비스에서 sendMessage
                                 if (isService && ServiceChat != null) {
-                                    ServiceChat.sendMessage(채팅방_seq, current_user_id, current_user_name,
+                                    ServiceChat.sendMessage(band_seq, chatRoom_seq, current_user_id, current_user_name,
                                             msg_type, txt_contents, msg_uri);
                                 }
                             }
 
                         }
-                    }
-                    else {
+                    } else {
                         Toast.makeText(Activity_band_chatting_room.this, "message 저장 실패", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -362,12 +390,11 @@ public class Activity_band_chatting_room extends AppCompatActivity {
         }
     }
 
-
     // message 가져오기
-    private void Retrofit_getMsg(final int chatRoom_seq, String current_user_id) {
+    private void Retrofit_getMsg(final int chatRoom_seq, String current_user_id, int page, int limit, boolean first) {
         /***********************  message 정보 가져오기  ***************************/
         retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
-        Call<ArrayList<chatting>> call1 = retrofitAPI.readChat(chatRoom_seq, current_user_id);
+        Call<ArrayList<chatting>> call1 = retrofitAPI.readChat(chatRoom_seq, current_user_id, page, limit);
 
         call1.enqueue(new Callback<ArrayList<chatting>>() {
             @Override
@@ -413,12 +440,18 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                     }
 
 
-                    // adapter 연결
                     /** 어댑터 연결 **/
-                    레이아웃매니저 = new LinearLayoutManager(Activity_band_chatting_room.this);
+                    레이아웃매니저 = new LinearLayoutManager(Activity_band_chatting_room.this, LinearLayoutManager.VERTICAL, true);
                     어댑터 = new Adapter_chatting(chatting_list);
                     recy.setLayoutManager(레이아웃매니저);
                     recy.setAdapter(어댑터);
+
+
+                    // 보여지는 부분 (하단/상단)
+                    if(first) recy.scrollToPosition(0);
+                    else recy.scrollToPosition(어댑터.getItemCount()-1);
+
+
 
                     //리사이클러뷰 화면전환
                     어댑터.setOnItemClickListener(new Adapter_chatting.OnItemClickListener() {
@@ -439,8 +472,6 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                             }
                         }
                     });
-                    // 가장 하단 보여주기
-                    recy.scrollToPosition(어댑터.getItemCount() - 1);
 
                 } else {
                     Toast.makeText(Activity_band_chatting_room.this, "메세지 가져오기 실패", Toast.LENGTH_SHORT).show();
@@ -482,14 +513,9 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                         StorageReference imagesRef = FirebaseCloudStorage.Storage_img(채팅방uri경로);
                         imagesRef.delete();
                     }
-
                     Toast.makeText(Activity_band_chatting_room.this, "채팅방 삭제 성공", Toast.LENGTH_SHORT).show();
-
-                    finish();
-
                 } else {
                     Toast.makeText(Activity_band_chatting_room.this, "채팅방 삭제 실패", Toast.LENGTH_SHORT).show();
-                    finish();
                 }
             }
 
@@ -503,7 +529,7 @@ public class Activity_band_chatting_room extends AppCompatActivity {
 
     }
 
-    // 채팅방 탈퇴
+    // 채팅방 퇴장
     private void Retrofit채팅방멤버삭제(String user_id, int 채팅방_seq) {
         /***********************  공개채팅방 저장  ***************************/
         retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
@@ -576,7 +602,7 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                         builder1.setPositiveButton("예", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int id) {
                                 // 채팅방 삭제
-                                sendMessage(채팅방_seq, current_user_id, current_user_name,
+                                sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                                         SPECIAL, "채팅방삭제", null);
                                 Retrofit삭제(밴드번호, 채팅방_seq);
                             }
@@ -589,16 +615,16 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                         return true;
                     case R.id.menu_getout_chatting:
                     case R.id.menu_getout:
-                        // 채팅방탈퇴
+                        // 채팅방퇴장
                         AlertDialog.Builder builder2 = new AlertDialog.Builder(Activity_band_chatting_room.this);
                         builder2.setTitle("나가기"); //AlertDialog의 제목 부분
                         builder2.setMessage("정말로 채팅방을 나가시겠습니까?"); //AlertDialog의 내용 부분
                         builder2.setPositiveButton("예", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int id) {
 
-                                // 채팅방에 탈퇴했다고 서버에 전송
-                                sendMessage(채팅방_seq, current_user_id, current_user_name,
-                                        SPECIAL, "채팅방탈퇴", null);
+                                // 채팅방에 퇴장했다고 서버에 전송
+                                sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
+                                        SPECIAL, "채팅방퇴장", null);
                                 Retrofit채팅방멤버삭제(current_user_id, 채팅방_seq);
                             }
                         });
@@ -634,16 +660,6 @@ public class Activity_band_chatting_room extends AppCompatActivity {
         } else return "오전 " + 시 + ":" + 분;
     }
 
-    private String 현재날짜구하기() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            String formatedNow = now.format(formatter);
-            return formatedNow;
-        }
-        return null;
-    }
-
     /**
      * 서비스
      **/
@@ -662,11 +678,11 @@ public class Activity_band_chatting_room extends AppCompatActivity {
             // 내 채팅방이 아니면 입장했다고 전송
             if (isMine == 0) {
                 // 채팅방에 입장했다고 서버에 전송
-                sendMessage(채팅방_seq, current_user_id, current_user_name, SPECIAL, "채팅방최초입장", null);
+                sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name, SPECIAL, "채팅방최초입장", null);
                 isMine = 1;
             } else {
                 // 채팅방에 입장했다고 서버에 전송
-                sendMessage(채팅방_seq, current_user_id, current_user_name, SPECIAL, "채팅방입장", null);
+                sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name, SPECIAL, "채팅방입장", null);
             }
         }
 
@@ -680,11 +696,11 @@ public class Activity_band_chatting_room extends AppCompatActivity {
     };
 
     // 서비스 send 메서드
-    public void sendMessage(int 채팅방_seq, String current_user_id, String current_user_name,
+    public void sendMessage(int 밴드번호, int 채팅방_seq, String current_user_id, String current_user_name,
                             int msg_type, String txt_contents, String path) {
 
         // 채팅방 나가기 시 'destroy 된 Activity 에서 load 할 수 없다 Error 발생
-        if(msg_type==1 && txt_contents.equals("채팅방나가기"));
+        if (msg_type == 1 && txt_contents.equals("채팅방나가기")) ;
         else {
             // 이미지/ 동영상 : 보낼 때 로딩 표시
             if (msg_type == IMAGE || msg_type == VIDEO) {
@@ -696,16 +712,18 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                 // 추가되는 message 어댑터에 반영
                 ((Adapter_chatting) 어댑터).addChat(chatting1);
                 // 가장 하단 보여주기
-                recy.scrollToPosition(어댑터.getItemCount() - 1);
+                recy.scrollToPosition(0);
+                ////////////////////////////////////////////////////
             }
 
 
-
             // 채팅방입장 : db 저장 X , 서버에 전송 O
-            if (msg_type == SPECIAL && (txt_contents.equals("채팅방입장") || txt_contents.equals("채팅방나가기"))) {
+            if (msg_type == SPECIAL && (txt_contents.equals("채팅방입장") ||
+                    txt_contents.equals("채팅방나가기") ||
+                    txt_contents.equals("채팅방삭제"))) {
                 // 서비스에서 sendMessage
                 if (isService && ServiceChat != null) {
-                    ServiceChat.sendMessage(채팅방_seq, current_user_id, current_user_name,
+                    ServiceChat.sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                             msg_type, txt_contents, path);
                 }
             }
@@ -718,7 +736,7 @@ public class Activity_band_chatting_room extends AppCompatActivity {
             System.out.println(path);
             // db 저장 및
             // 서비스에 전달 (sendMessage)
-            Retrofit_createMsg(채팅방_seq, current_user_id, msg_type, txt_contents, path);
+            Retrofit_createMsg(밴드번호, 채팅방_seq, current_user_id, msg_type, txt_contents, path);
         }
 
     }
@@ -749,72 +767,74 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                 String 채팅방에없는멤버리스트 = jsonMessage.optString("채팅방에없는멤버리스트");
 
 
-                if(msg_type==1 && (txt_contents.equals("채팅방입장") || txt_contents.equals("채팅방나가기")));
-                else;
+                // 읽음표시 업데이트
+                if(msg_type == CREATE_ROOM);
+                else ((Adapter_chatting) 어댑터).updateChat(채팅방에있는멤버리스트);
 
 
-//                System.out.println(채팅방에있는멤버리스트);
-                if(msg_type==1 && txt_contents.equals("채팅방나가기"));
-                else {
-                    // 읽음표시 업데이트
-                    ((Adapter_chatting) 어댑터).updateChat(채팅방에있는멤버리스트);
-                    //---------------chatting setting (추가할 데이터) ----------------------
-                    chatting chatting1 = new chatting();
-                    chatting1.setChatRoom_seq(Integer.parseInt(chatRoom_seq));
-                    chatting1.setUser_id(user_id);
-                    chatting1.setNickname(nickname);
-                    if (txt_contents != null) chatting1.setTxt_contents(txt_contents.trim());
-                    else chatting1.setTxt_contents(txt_contents);
-                    chatting1.setMsg_uri(msg_uri);
-                    chatting1.setMsg_type(msg_type);
-                    chatting1.setUnread_list(String.valueOf(채팅방에없는멤버리스트).replace("[","").replace("]","").replace(" ",""));
-                    chatting1.setMsg_created_at(msg_created_at);
+                //---------------chatting setting (추가할 데이터) ----------------------
+                chatting chatting1 = new chatting();
+                chatting1.setChatRoom_seq(Integer.parseInt(chatRoom_seq));
+                chatting1.setUser_id(user_id);
+                chatting1.setNickname(nickname);
+                if (txt_contents != null) chatting1.setTxt_contents(txt_contents.trim());
+                else chatting1.setTxt_contents(txt_contents);
+                chatting1.setMsg_uri(msg_uri);
+                chatting1.setMsg_type(msg_type);
+                chatting1.setUnread_list(String.valueOf(채팅방에없는멤버리스트).replace("[", "").replace("]", "").replace(" ", ""));
+                chatting1.setMsg_created_at(msg_created_at);
 
-                    if (user_id.equals(current_user_id)) { // 내가 보낸 메세지
-                        if (msg_type == TEXT) chatting1.setViewType(0);
-                        else if (msg_type == IMAGE) chatting1.setViewType(2);
-                        else if (msg_type == VIDEO) chatting1.setViewType(4);
-                        else chatting1.setViewType(7);
-                    } else {                               // 받은 메세지
-                        if (msg_type == TEXT) chatting1.setViewType(1);
-                        else if (msg_type == IMAGE) chatting1.setViewType(3);
-                        else if (msg_type == VIDEO) chatting1.setViewType(5);
-                        else chatting1.setViewType(7);
-                    }
-                    //------------------------------------------------------------
-
-                    //---------------- 어댑터 추가 (메세지 올 때마다 추가)---------------------------------
-                    if (msg_type != SPECIAL) {
-                        // 내가 보낸 메세지일 때 이미지, 비디오는 로딩화면 제거
-                        if (user_id.equals(current_user_id)) {
-                            if (msg_type == IMAGE || msg_type == VIDEO) {
-                                ((Adapter_chatting) 어댑터).removeChat();
-                            }
-                        }
-                        // 추가되는 message 어댑터에 반영
-                        ((Adapter_chatting) 어댑터).addChat(chatting1);
-                        // 가장 하단 보여주기            if(!unread_list.equals("[]"))
-                        recy.scrollToPosition(어댑터.getItemCount() - 1);
-                    }
-                    else { // Special : 채팅방최초입장 / 채팅방입장 / 채팅방나가기 / 채팅방탈퇴 / 채팅방삭제 / 로그아웃
-                        if (txt_contents.equals("채팅방삭제")) {
-                            finish();
-                        } else if (txt_contents.equals("채팅방최초입장")) {
-                            ((Adapter_chatting) 어댑터).addChat(chatting1);
-                            recy.scrollToPosition(어댑터.getItemCount() - 1);
-                        } else if (txt_contents.equals("채팅방탈퇴")) {
-                            ((Adapter_chatting) 어댑터).addChat(chatting1);
-                            recy.scrollToPosition(어댑터.getItemCount() - 1);
-                        } else ;
-                    }
+                if (user_id.equals(current_user_id)) { // 내가 보낸 메세지
+                    if (msg_type == TEXT) chatting1.setViewType(0);
+                    else if (msg_type == IMAGE) chatting1.setViewType(2);
+                    else if (msg_type == VIDEO) chatting1.setViewType(4);
+                    else chatting1.setViewType(7);
+                } else {                               // 받은 메세지
+                    if (msg_type == TEXT) chatting1.setViewType(1);
+                    else if (msg_type == IMAGE) chatting1.setViewType(3);
+                    else if (msg_type == VIDEO) chatting1.setViewType(5);
+                    else chatting1.setViewType(7);
                 }
+                //------------------------------------------------------------
+
+                //---------------- 어댑터 추가 (메세지 올 때마다 추가)---------------------------------
+                if (msg_type == TEXT || msg_type == IMAGE || msg_type == VIDEO) {
+                    // 내가 보낸 메세지일 때 이미지, 비디오는 로딩화면 제거
+                    if (user_id.equals(current_user_id)) {
+                        if (msg_type == IMAGE || msg_type == VIDEO) {
+                            ((Adapter_chatting) 어댑터).removeChat();
+                        }
+                    }
+                    // 추가되는 message 어댑터에 반영
+                    ((Adapter_chatting) 어댑터).addChat(chatting1);
+                    // 가장 하단 보여주기            if(!unread_list.equals("[]"))
+                    recy.scrollToPosition(0);
+                    ////////////////////////////////////////////////////
+                } else { // Special : 채팅방최초입장 / 채팅방입장 / 채팅방나가기 / 채팅방퇴장 / 채팅방삭제 / 로그아웃
+                    if (txt_contents.equals("채팅방삭제")) {
+                        // 채팅방에 있으면 Activity finish
+                        if (채팅방에있는멤버리스트.contains(current_user_id)) {
+                            finish();
+                        }
+                    } else if (txt_contents.equals("채팅방최초입장")) {
+                        ((Adapter_chatting) 어댑터).addChat(chatting1);
+                        // 가장 하단 보여주기
+                        recy.scrollToPosition(0);
+                        ////////////////////////////////////////////////////
+                    } else if (txt_contents.equals("채팅방퇴장")) {
+                        ((Adapter_chatting) 어댑터).addChat(chatting1);
+                        // 가장 하단 보여주기
+                        recy.scrollToPosition(0);
+                        ////////////////////////////////////////////////////
+                    } else;
+                }
+
             } catch (JSONException e) {
                 throw new RuntimeException(e);
             }
 
         }
     };
-
 
     /**
      * 생명주기
@@ -832,8 +852,6 @@ public class Activity_band_chatting_room extends AppCompatActivity {
         IntentFilter intentFilter = new IntentFilter("채팅");
         registerReceiver(chatReceiver, intentFilter);
     }
-
-
     @Override
     protected void onStop() {
         super.onStop();

@@ -249,7 +249,7 @@ public class Activity_band_chatting_room_create_update extends AppCompatActivity
                         // 서버에 메세지 전송
                         // 공개채팅방 만들었으니 방 생성자 ReceiveThread 초기화 해달라
                         if (isService && ServiceChat != null) {
-                            ServiceChat.sendMessage(Integer.parseInt(response.body()), user_id, user_name,
+                            ServiceChat.sendMessage(밴드번호, Integer.parseInt(response.body()), user_id, user_name,
                                     4, "공개채팅방", null);
                         }
                     }

@@ -127,7 +127,7 @@ public class Fragment_more extends Fragment {
                             @Override
                             public Unit invoke(Throwable throwable) {
                                 // 소켓 서버에 전달
-                                sendMessage(-1, current_user_id, current_user_name,
+                                sendMessage(-1,-1, current_user_id, current_user_name,
                                         SPECIAL, "로그아웃", null);
                                 shared삭제();
 //                                stopService();
@@ -396,10 +396,10 @@ public class Fragment_more extends Fragment {
         }
     };
     // 서비스 send 메서드
-    public void sendMessage(int 채팅방_seq, String current_user_id, String current_user_name,
+    public void sendMessage(int 밴드번호, int 채팅방_seq, String current_user_id, String current_user_name,
                             int msg_type, String content, String path) {
         if (isService && ServiceChat != null) {
-            ServiceChat.sendMessage(채팅방_seq, current_user_id, current_user_name,
+            ServiceChat.sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                     msg_type, content, path);
         }
     }

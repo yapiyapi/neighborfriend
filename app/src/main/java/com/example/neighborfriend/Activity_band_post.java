@@ -209,7 +209,7 @@ public class Activity_band_post extends AppCompatActivity {
 
                         /**  이미지 recyclerview **/
                         List 이미지_list = Arrays.asList(image_list.replace("[", "").replace("]", "").split(","));
-                        System.out.println(이미지_list);
+
 
                         /** 어댑터 연결 **/
                         레이아웃매니저 = new LinearLayoutManager(Activity_band_post.this, LinearLayoutManager.HORIZONTAL, false);
@@ -297,7 +297,7 @@ public class Activity_band_post extends AppCompatActivity {
 
                     /**  이미지 recyclerview **/
                     List 이미지_list = Arrays.asList(image_list.replace("[", "").replace("]", "").split(","));
-                    System.out.println(이미지_list);
+
 
                     /** 어댑터 연결 **/
                     레이아웃매니저 = new LinearLayoutManager(Activity_band_post.this, LinearLayoutManager.HORIZONTAL, false);

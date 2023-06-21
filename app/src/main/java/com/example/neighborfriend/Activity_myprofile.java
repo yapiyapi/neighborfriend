@@ -92,7 +92,6 @@ public class Activity_myprofile extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 // storage 저장
-                System.out.println(이미지);
                 if(!경로.contains("https")){ // 카카오톡 경로가 아닐 때는 저장 안함
 
                     // 썸네일 바꿨을 때

@@ -136,6 +136,7 @@ public interface RetrofitAPI {
     Call<List> read_chatRoom_member_list(
             @Query("chatRoom_seq") int chatRoom_seq
     );
+
     @FormUrlEncoded
     @POST("chatting/create_chatRoom.php")                // 공개채팅방 생성
     Call<String> createChatRoom(
@@ -188,7 +189,9 @@ public interface RetrofitAPI {
     @GET("chatting/chat/read.php")                // 읽기
     Call<ArrayList<chatting>> readChat(
             @Query("chatRoom_seq") int chatRoom_seq,
-            @Query("user_id") String user_id
+            @Query("user_id") String user_id,
+            @Query("page") int page,
+            @Query("limit") int limit
     );
 
 
@@ -217,4 +220,10 @@ public interface RetrofitAPI {
             @Query("band_seq") int band_seq
     );
 
+    // 서비스 -------------------------------------------------------------
+    @GET("service/get_chatRoom.php")                // 채팅방 정보 가져오기
+    Call<chattingRoom> getChatRoom(
+            @Query("chatRoom_seq") int chatRoom_seq,
+            @Query("user_id") String user_id
+    );
 }

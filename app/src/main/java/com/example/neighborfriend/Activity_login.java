@@ -149,7 +149,7 @@ public class Activity_login extends AppCompatActivity {
         // user id
         current_id = userData.getString("id","noneId");
         /**  자동 로그인 **/
-        AutoLoginWithhasToken();
+//        AutoLoginWithhasToken();
         AutoLogin();
     }
 
@@ -248,11 +248,6 @@ public class Activity_login extends AppCompatActivity {
                     AgeRange ageRange = user.getKakaoAccount().getAgeRange();
                     Gender gender = user.getKakaoAccount().getGender();
 
-//                    Toast.makeText(Activity_login.this, id, Toast.LENGTH_SHORT).show();
-//                    Toast.makeText(Activity_login.this, thumnail_url, Toast.LENGTH_SHORT).show();
-//                    Toast.makeText(Activity_login.this, nickname, Toast.LENGTH_SHORT).show();
-//                    Toast.makeText(Activity_login.this, ageRange.toString(), Toast.LENGTH_SHORT).show();
-//                    Toast.makeText(Activity_login.this, gender.toString(), Toast.LENGTH_SHORT).show();
                     // 서버에 data 있는지 확인 후 없으면 저장
                     if(requestQueue == null) requestQueue = Volley.newRequestQueue(getApplicationContext());
                     Volley(id,thumnail_url,nickname,ageRange,gender);
@@ -275,8 +270,9 @@ public class Activity_login extends AppCompatActivity {
                         String id = String.valueOf(accessTokenInfo.getId());
                         Intent intent = new Intent(Activity_login.this, MainActivity.class);
                         intent.putExtra("user_id",id);
-                        startActivity(intent);
-                        finish();
+
+//                        startActivity(intent);
+//                        finish();
                     }
                     return null;
                 }
@@ -285,8 +281,6 @@ public class Activity_login extends AppCompatActivity {
     }
 
     public void AutoLogin() {
-
-        Log.i("뭐",current_id);
         if(!current_id.equals("noneId")){
             Intent intent = new Intent(Activity_login.this, MainActivity.class);
             intent.putExtra("user_id",current_id);

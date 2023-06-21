@@ -1,11 +1,17 @@
 package com.example.neighborfriend.Fragment;
 
+import static android.content.Context.BIND_AUTO_CREATE;
 import static android.content.Context.MODE_PRIVATE;
 
 import static com.example.neighborfriend.Activity_band_chatting_room.시간포맷;
 import static com.example.neighborfriend.MainActivity.retrofitAPI;
 
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
@@ -15,6 +21,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.os.IBinder;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,12 +34,15 @@ import com.example.neighborfriend.Activity_band_chatting_room_list;
 import com.example.neighborfriend.Adapter.Adapter_chattingList;
 import com.example.neighborfriend.Class.RetrofitClass;
 import com.example.neighborfriend.Interface.RetrofitAPI;
+import com.example.neighborfriend.Service.Service_chatting;
 import com.example.neighborfriend.databinding.FragmentChattingBinding;
 import com.example.neighborfriend.object.band;
 import com.example.neighborfriend.object.chattingRoom;
 import com.example.neighborfriend.object.home_cell;
 
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +54,11 @@ import retrofit2.Response;
 public class Fragment_chatting extends Fragment {
     private FragmentChattingBinding binding;
     /**  SharedPreferences **/ SharedPreferences userData;
+    /**
+     * Service
+     **/
+    Service_chatting ServiceChat;
+    boolean isService = false; // 서비스 중인 확인용
     /**  RetrofitAPI **/ RetrofitAPI retrofitAPI;
     /**  RecyclerView **/
     Adapter_chattingList 어댑터;
@@ -84,6 +99,8 @@ public class Fragment_chatting extends Fragment {
 
         /**  초기화 **/
         list_chattingRoom = new ArrayList<chattingRoom>();
+        recy.setItemAnimator(null);
+
         /**  Http 통신 **/
         // user id 의 밴드 목록 가져옴
         Retrofit(currentId);
@@ -104,31 +121,16 @@ public class Fragment_chatting extends Fragment {
                     List<chattingRoom> chattingRoomList = response.body();
 
                     for (int i = 0; i < chattingRoomList.size(); i++) {
-                        // home_cell 초기화
-                        chattingRoom chattingRoom_1 = new chattingRoom();
-
-                        // 채팅방 정보
-                        chattingRoom_1.setSeq(chattingRoomList.get(i).getSeq());
-                        chattingRoom_1.setBand_seq(chattingRoomList.get(i).getBand_seq());
-                        chattingRoom_1.setBand_title(chattingRoomList.get(i).getBand_title());
-                        chattingRoom_1.setUser_id(chattingRoomList.get(i).getUser_id());
-                        chattingRoom_1.setThumnail(chattingRoomList.get(i).getThumnail());
-                        chattingRoom_1.setTitle(chattingRoomList.get(i).getTitle());
-                        chattingRoom_1.setIntroduction(chattingRoomList.get(i).getIntroduction());
-                        chattingRoom_1.setRoom_type(chattingRoomList.get(i).getRoom_type());
-                        chattingRoom_1.setCreated_at(chattingRoomList.get(i).getCreated_at());
-                        chattingRoom_1.setMember(chattingRoomList.get(i).getMember());
-
-                        // 마지막 메세지 정보 (null 가능)
-                        chattingRoom_1.setTxt_contents(chattingRoomList.get(i).getTxt_contents());
-                        chattingRoom_1.setMsg_type(chattingRoomList.get(i).getMsg_type());
-                        if (chattingRoomList.get(i).getMsg_created_at()==null) chattingRoom_1.setMsg_created_at(null);
-                        else chattingRoom_1.setMsg_created_at( 시간포맷(chattingRoomList.get(i).getMsg_created_at()));
-                        chattingRoom_1.setIsMine(chattingRoomList.get(i).getIsMine());
-
-                        // list 에 bands_post object 추가
-//                       Log.i("ASdf",chattingRoomList.get(i).getBand_title());
-                        list_chattingRoom.add(chattingRoom_1);
+                        /** 채팅방 **/
+                        // 마지막 채팅 시간
+                        if (chattingRoomList.get(i).getMsg_created_at() == null)
+                            chattingRoomList.get(i).setMsg_created_at(null);
+                        else
+                            chattingRoomList.get(i).setMsg_created_at(시간포맷(chattingRoomList.get(i).getMsg_created_at()));
+                        // 0: 카테고리/ 1: 채팅방정보
+                        chattingRoomList.get(i).setViewType(1);
+                        // --------------------------------------------------------------
+                        list_chattingRoom.add(chattingRoomList.get(i));
 
                     }
 
@@ -180,4 +182,130 @@ public class Fragment_chatting extends Fragment {
         };
         requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), callback);
     }
+
+    /**
+     * ServiceConnection
+     **/
+    ServiceConnection conn = new ServiceConnection() {
+        public void onServiceConnected(ComponentName name,
+                                       IBinder service) {
+            // 서비스와 연결되었을 때 호출되는 메서드
+            // 서비스 객체를 전역변수로 저장
+            Service_chatting.ChattingBinder mb = (Service_chatting.ChattingBinder) service;
+            ServiceChat = mb.getService(); // 서비스가 제공하는 메소드 호출하여
+            // 서비스쪽 객체를 전달받을수 있슴
+            isService = true;
+        }
+
+        public void onServiceDisconnected(ComponentName name) {
+            // 서비스와 연결이 끊겼을 때 호출되는 메서드
+            isService = false;
+        }
+    };
+    /** BroadcastReceiver **/
+    private BroadcastReceiver chatReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            // 메세지를 받을 때마다 service 에서 msg 전송
+            String chatMessage = intent.getStringExtra("message");
+
+            JSONObject jsonMessage = null;
+            try {
+                jsonMessage = new JSONObject(chatMessage);
+
+
+                int band_seq = Integer.parseInt(jsonMessage.optString("band_seq"));
+                int chatRoom_seq = Integer.parseInt(jsonMessage.optString("chatRoom_seq"));
+                String user_id = jsonMessage.optString("user_id");
+                String nickname = jsonMessage.optString("nickname");
+                String txt_contents = jsonMessage.optString("txt_contents");
+                String msg_uri = jsonMessage.optString("msg_uri");
+                int msg_type = Integer.parseInt(jsonMessage.optString("msg_type"));
+                String msg_created_at = jsonMessage.optString("msg_created_at");
+
+
+                if (msg_type == 3 && (txt_contents.equals("채팅방입장") ||
+                        txt_contents.equals("채팅방나가기") ||
+                        txt_contents.equals("로그아웃"))) ;
+                else if (msg_type == 4) { // 채팅방 생성
+                } else {
+                    // 해당 채팅방 찾아서
+                    // 채팅메세지, 채팅메세지 시간, 읽음표시 수정
+                    for (int i = 0; i < list_chattingRoom.size(); i++) {
+                        if (list_chattingRoom.get(i).getSeq() == chatRoom_seq) {
+                            chattingRoom chattingRoom = new chattingRoom();
+
+                            chattingRoom = list_chattingRoom.get(i);
+
+                            if (msg_type == 3) {
+                                if (txt_contents.equals("채팅방최초입장")) {
+                                    어댑터.updateItemSpecial(i, 1);
+                                    break;
+                                } else if (txt_contents.equals("채팅방퇴장")) {
+                                    어댑터.updateItemSpecial(i, -1);
+                                    break;
+                                } else if (txt_contents.equals("채팅방삭제")){
+                                    list_chattingRoom.remove(i);
+                                    어댑터.deleteItem(i);
+                                }
+
+                            } else {
+
+                                // 마지막 채팅
+                                if (msg_type == 1) chattingRoom.setTxt_contents("사진을 보냈습니다.");
+                                else if (msg_type == 2) chattingRoom.setTxt_contents("동영상을 보냈습니다.");
+                                else chattingRoom.setTxt_contents(txt_contents);
+
+                                // 읽음 표시 +1
+                                chattingRoom.setUnreadNum(chattingRoom.getUnreadNum() + 1);
+
+                                // 마지막 채팅 시간
+                                chattingRoom.setMsg_created_at(시간포맷(msg_created_at));
+
+                                어댑터.updateItem(i, chattingRoom);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    };
+
+    /**
+     * 생명주기
+     **/
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        /** 서비스에 바인딩 **/
+        Intent serviceIntent = new Intent(getContext(), Service_chatting.class);
+        getContext().bindService(serviceIntent, conn, BIND_AUTO_CREATE);
+
+
+        // 브로드캐스트 받을 준비
+        IntentFilter intentFilter = new IntentFilter("채팅");
+        getContext().registerReceiver(chatReceiver, intentFilter);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // 서비스에 언바인딩
+        if (isService) {
+            getContext().unbindService(conn);
+            isService = false;
+        }
+
+        // 브로드캐스트 받을 준비 해제
+        getContext().unregisterReceiver(chatReceiver);
+    }
+
 }

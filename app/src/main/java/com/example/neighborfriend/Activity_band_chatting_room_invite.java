@@ -132,7 +132,7 @@ public class Activity_band_chatting_room_invite extends AppCompatActivity {
                             txtInvt.setOnClickListener(new View.OnClickListener() {
                                 @Override
                                 public void onClick(View v) {
-                                    Retrofit비공개채팅방생성(밴드번호,current_user_id, current_user_name,memberToInviteArr,2);
+                                    Retrofit비공개채팅방생성(band_seq_get,current_user_id, current_user_name,memberToInviteArr,2);
                                 }
                             });
                         }
@@ -166,19 +166,18 @@ public class Activity_band_chatting_room_invite extends AppCompatActivity {
             public void onResponse(@NotNull Call<Integer> call, @NotNull Response<Integer> response) {
                 // 서버에서 응답을 받아옴
                 if (response.isSuccessful() && response.body() != null) {
-                    System.out.println(response.body());
 //
                     /** 서버에 메세지 전송 **/
                     // 비공개채팅방 만들었으니 방 생성자 및 초대 멤버 ReceiveThread 초기화 해달라
                     if (isService && ServiceChat != null) {
-                        ServiceChat.sendMessage(response.body(), user_id, user_name,
+                        ServiceChat.sendMessage(밴드번호, response.body(), user_id, user_name,
                                 4, "비공개채팅방", String.valueOf(memberList));
                     }
 
                     /** 채팅방으로 이동 **/
                     Intent intent = new Intent(Activity_band_chatting_room_invite.this, Activity_band_chatting_room.class);
-                    intent.putExtra("방개설자_id", current_user_id);
-                    intent.putExtra("밴드번호", 밴드번호);
+                    intent.putExtra("방개설자_id", user_id);
+                    intent.putExtra("밴드번호", band_seq);
                     intent.putExtra("채팅방_seq", response.body());
                     intent.putExtra("isMine",1);
 
