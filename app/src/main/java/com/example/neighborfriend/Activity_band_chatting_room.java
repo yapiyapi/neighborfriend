@@ -70,6 +70,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.Array;
 import java.net.Socket;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -159,7 +160,6 @@ public class Activity_band_chatting_room extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 // 소켓에 전달
-                System.out.println("여기는 뒤롭 ㅓ튼");
                 sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                         SPECIAL, "채팅방나가기", null);
 
@@ -265,12 +265,6 @@ public class Activity_band_chatting_room extends AppCompatActivity {
         /** 초기화 **/
         chatting_list = new ArrayList<>();
         recy.setItemAnimator(null); // 애니메이션 효과 제거
-
-        /** 어댑터 연결 **/
-        레이아웃매니저 = new LinearLayoutManager(Activity_band_chatting_room.this, LinearLayoutManager.VERTICAL, true);
-        어댑터 = new Adapter_chatting(chatting_list);
-        recy.setLayoutManager(레이아웃매니저);
-        recy.setAdapter(어댑터);
 
 
         // 채팅 내용 가져오기
@@ -393,6 +387,8 @@ public class Activity_band_chatting_room extends AppCompatActivity {
     // message 가져오기
     private void Retrofit_getMsg(final int chatRoom_seq, String current_user_id, int page, int limit, boolean first) {
         /***********************  message 정보 가져오기  ***************************/
+        ArrayList 페이징추가메세지 = new ArrayList();
+
         retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
         Call<ArrayList<chatting>> call1 = retrofitAPI.readChat(chatRoom_seq, current_user_id, page, limit);
 
@@ -435,21 +431,25 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                             } else chatting_1.setViewType(7);
                         }
 
-                        chatting_list.add(chatting_1);
+                        페이징추가메세지.add(chatting_1);
 
                     }
 
 
-                    /** 어댑터 연결 **/
-                    레이아웃매니저 = new LinearLayoutManager(Activity_band_chatting_room.this, LinearLayoutManager.VERTICAL, true);
-                    어댑터 = new Adapter_chatting(chatting_list);
-                    recy.setLayoutManager(레이아웃매니저);
-                    recy.setAdapter(어댑터);
-
-
                     // 보여지는 부분 (하단/상단)
-                    if(first) recy.scrollToPosition(0);
-                    else recy.scrollToPosition(어댑터.getItemCount()-1);
+                    if(first) {
+                        chatting_list.addAll(페이징추가메세지);
+                        /** 어댑터 연결 **/
+                        레이아웃매니저 = new LinearLayoutManager(Activity_band_chatting_room.this, LinearLayoutManager.VERTICAL, true);
+                        어댑터 = new Adapter_chatting(chatting_list);
+                        recy.setLayoutManager(레이아웃매니저);
+                        recy.setAdapter(어댑터);
+
+                        recy.scrollToPosition(0);
+                    }
+                    else {
+                        ((Adapter_chatting) 어댑터).paging(페이징추가메세지);
+                    }
 
 
 
