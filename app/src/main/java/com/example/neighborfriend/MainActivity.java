@@ -141,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /** Http 통신 **/
-    // 검색어로 band data 가져오기
+    // user data 가져오기
     private void Retrofit(final String id){
         retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
         Call<User> call = retrofitAPI.sendData(id);

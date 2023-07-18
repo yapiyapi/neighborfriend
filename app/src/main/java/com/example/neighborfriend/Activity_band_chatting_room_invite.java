@@ -1,6 +1,5 @@
 package com.example.neighborfriend;
 
-import static com.example.neighborfriend.Activity_band_chatting_room.시간포맷;
 import static com.example.neighborfriend.MainActivity.retrofitAPI;
 
 import androidx.annotation.NonNull;
@@ -12,7 +11,6 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
@@ -20,19 +18,12 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.bumptech.glide.Glide;
-import com.example.neighborfriend.Adapter.Adapter_chattingList;
 import com.example.neighborfriend.Adapter.Adapter_chatting_invite;
-import com.example.neighborfriend.Class.FirebaseCloudStorage;
 import com.example.neighborfriend.Class.RetrofitClass;
 import com.example.neighborfriend.Interface.RetrofitAPI;
 import com.example.neighborfriend.Service.Service_chatting;
-import com.example.neighborfriend.databinding.ActivityBandChattingRoomImgBinding;
 import com.example.neighborfriend.databinding.ActivityBandChattingRoomInviteBinding;
-import com.example.neighborfriend.object.chattingRoom;
 import com.example.neighborfriend.object.memberToInvite;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.storage.StorageReference;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -170,7 +161,7 @@ public class Activity_band_chatting_room_invite extends AppCompatActivity {
                     /** 서버에 메세지 전송 **/
                     // 비공개채팅방 만들었으니 방 생성자 및 초대 멤버 ReceiveThread 초기화 해달라
                     if (isService && ServiceChat != null) {
-                        ServiceChat.sendMessage(밴드번호, response.body(), user_id, user_name,
+                        ServiceChat.sendMessage_Service(밴드번호, response.body(), user_id, user_name,
                                 4, "비공개채팅방", String.valueOf(memberList));
                     }
 

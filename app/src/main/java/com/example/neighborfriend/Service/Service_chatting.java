@@ -1,39 +1,26 @@
 package com.example.neighborfriend.Service;
 
-import static com.example.neighborfriend.Activity_band_chatting_room.시간포맷;
 import static com.example.neighborfriend.MainActivity.retrofitAPI;
 
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.neighborfriend.Activity_band_chatting_room;
-import com.example.neighborfriend.Activity_band_chatting_room_invite;
-import com.example.neighborfriend.Activity_band_chatting_room_list;
-import com.example.neighborfriend.Adapter.Adapter_chattingList;
-import com.example.neighborfriend.Adapter.Adapter_chatting_invite;
 import com.example.neighborfriend.Class.RetrofitClass;
 import com.example.neighborfriend.Interface.RetrofitAPI;
 import com.example.neighborfriend.R;
 import com.example.neighborfriend.object.chattingRoom;
-import com.example.neighborfriend.object.memberToInvite;
-import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
@@ -47,15 +34,14 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 public class Service_chatting extends Service {
-    private static final String SERVER_HOST = "192.168.1.55";
+    private static final String SERVER_HOST = "192.168.1.48";
+//    private static final String SERVER_HOST = "192.168.0.3";
     private static final int SERVER_PORT = 8888;
     /**
      * 알림
@@ -91,17 +77,23 @@ public class Service_chatting extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // 서비스 start 될 때 (한번) 활성화
         if (intent != null && intent.getExtras() != null) {
+            // 받은 아이디, 이름
             String current_user_id = intent.getStringExtra("id");
             String current_user_name = intent.getStringExtra("nickname");
-
+            // 소켓 쓰레드 생성 및 실행
             receiveThread = new ReceiveThread(current_user_id, current_user_name);
             receiveThread.start();
         }
 
         Toast.makeText(this, "서비스 startCommand", Toast.LENGTH_SHORT).show();
         System.out.println("서비스 startCommand");
+        // 강제로 종료 시 : Service가 재시작 하지 않는다.
         return START_NOT_STICKY;
+        // 강제로 종료 시 : Service가 재시작 / intent 값을 null로 초기화 -> START_STICKY
+        // 강제로 종료 시 : Service가 재시작 / intent 값 유지 -> START_REDELIVER_INTENT
+
     }
 
     @Override
@@ -115,7 +107,7 @@ public class Service_chatting extends Service {
     /**
      * 메서드
      **/
-    public void sendMessage(int 밴드_seq, int 채팅방_seq, String current_user_id, String current_user_name, int msg_type, String content, String path) {
+    public void sendMessage_Service(int 밴드_seq, int 채팅방_seq, String current_user_id, String current_user_name, int msg_type, String content, String path) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -145,7 +137,6 @@ public class Service_chatting extends Service {
                 }
             }
         }).start();
-
     }
 
     private void closeConnection() {
@@ -173,10 +164,12 @@ public class Service_chatting extends Service {
         @Override
         public void run() {
             try {
+                // 서버의 ip, port 로 소켓 연결 시도
                 socket = new Socket(SERVER_HOST, SERVER_PORT);
+                // 쉽게 datastream 을 받고, 전송 할 수 있는 class
+                // 자동으로 flush 처리 (flush : buffer 에 남아있는 부분을 전부 보내는 역할)
                 out = new PrintWriter(socket.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
                 // 아이디, 이름 전송
                 out.println(current_user_id);
                 out.println(current_user_name);
@@ -219,6 +212,7 @@ public class Service_chatting extends Service {
 
 
                     /** 브로드캐스트 리시버 전송 **/
+                    // 채팅방, 채팅목록, 나의 채팅목록
                     Intent intent = new Intent("채팅");
                     intent.putExtra("message", inputMsg);
                     sendBroadcast(intent);

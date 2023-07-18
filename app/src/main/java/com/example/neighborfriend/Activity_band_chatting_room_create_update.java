@@ -1,7 +1,6 @@
 package com.example.neighborfriend;
 
 import static android.content.ContentValues.TAG;
-import static com.example.neighborfriend.MainActivity.HOST_URL;
 import static com.example.neighborfriend.MainActivity.retrofitAPI;
 
 import androidx.activity.result.ActivityResult;
@@ -12,16 +11,12 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -35,8 +30,6 @@ import com.example.neighborfriend.Class.RetrofitClass;
 import com.example.neighborfriend.Interface.RetrofitAPI;
 import com.example.neighborfriend.Service.Service_chatting;
 import com.example.neighborfriend.databinding.ActivityBandChattingRoomCreateUpdateBinding;
-import com.example.neighborfriend.object.band;
-import com.example.neighborfriend.object.chattingRoom;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -45,16 +38,7 @@ import com.google.firebase.storage.UploadTask;
 
 
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -249,7 +233,7 @@ public class Activity_band_chatting_room_create_update extends AppCompatActivity
                         // 서버에 메세지 전송
                         // 공개채팅방 만들었으니 방 생성자 ReceiveThread 초기화 해달라
                         if (isService && ServiceChat != null) {
-                            ServiceChat.sendMessage(밴드번호, Integer.parseInt(response.body()), user_id, user_name,
+                            ServiceChat.sendMessage_Service(밴드번호, Integer.parseInt(response.body()), user_id, user_name,
                                     4, "공개채팅방", null);
                         }
                     }

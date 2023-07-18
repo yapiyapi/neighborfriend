@@ -1,7 +1,5 @@
 package com.example.neighborfriend.Fragment;
 
-import static android.app.Activity.RESULT_OK;
-import static android.content.ContentValues.TAG;
 import static android.content.Context.BIND_AUTO_CREATE;
 import static android.content.Context.MODE_PRIVATE;
 import static com.example.neighborfriend.MainActivity.HOST_URL;
@@ -20,7 +18,6 @@ import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
@@ -41,26 +38,16 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
 import com.example.neighborfriend.Activity_ChangePw;
-import com.example.neighborfriend.Activity_band_create_update;
-import com.example.neighborfriend.Activity_band_setting;
 import com.example.neighborfriend.Activity_login;
 import com.example.neighborfriend.Activity_myprofile;
 import com.example.neighborfriend.Class.FirebaseCloudStorage;
-import com.example.neighborfriend.R;
 import com.example.neighborfriend.Service.Service_chatting;
 import com.example.neighborfriend.databinding.FragmentMoreBinding;
-import com.example.neighborfriend.databinding.FragmentSearchBinding;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.ktx.Firebase;
-import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 import com.kakao.sdk.user.UserApiClient;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import kotlin.Unit;
@@ -399,7 +386,7 @@ public class Fragment_more extends Fragment {
     public void sendMessage(int 밴드번호, int 채팅방_seq, String current_user_id, String current_user_name,
                             int msg_type, String content, String path) {
         if (isService && ServiceChat != null) {
-            ServiceChat.sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
+            ServiceChat.sendMessage_Service(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                     msg_type, content, path);
         }
     }

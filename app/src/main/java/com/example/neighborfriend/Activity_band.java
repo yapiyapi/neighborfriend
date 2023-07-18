@@ -126,7 +126,8 @@ public class Activity_band extends AppCompatActivity {
         btnStr.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 라이브 스트리밍
+                Intent intent = new Intent(Activity_band.this, Activity_live_streaming_broadcaster.class);
+                startActivity(intent);
             }
         });
 
@@ -280,8 +281,11 @@ public class Activity_band extends AppCompatActivity {
                     btnSet.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            Intent intent = new Intent(Activity_band.this, Activity_band_setting.class);
-                            intent.putExtra("밴드정보", 밴드jsonString);
+//                            Intent intent = new Intent(Activity_band.this, Activity_band_setting.class);
+//                            intent.putExtra("밴드정보", 밴드jsonString);
+//                            startActivity(intent);
+
+                            Intent intent = new Intent(Activity_band.this, Activity_live_streaming_watcher.class);
                             startActivity(intent);
                         }
                     });

@@ -203,7 +203,8 @@ public class Fragment_home extends Fragment {
 
                     // 성공로직
                 } else {
-                    Toast.makeText(getActivity(), "실패", Toast.LENGTH_SHORT).show();
+
+                    Toast.makeText(getActivity(), "실패ㅗㅑ", Toast.LENGTH_SHORT).show();
                 }
             }
             // 통신실패시

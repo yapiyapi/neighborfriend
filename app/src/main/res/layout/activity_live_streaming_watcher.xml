@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Activity_live_streaming_watcher">
+
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/surfaceView_watcher"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/btn_x_liveStreaming_watcher"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="32dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/x_btn" />
+
+
+    <ScrollView
+        android:id="@+id/scroll_liveStreaming_watcher"
+        android:layout_width="0dp"
+        android:layout_height="370dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/surfaceView_watcher">
+
+        <TextView
+            android:id="@+id/textview_liveStreaming_watcher"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:textSize="16sp"/>
+    </ScrollView>
+
+
+    <!--    메세지 입력창-->
+    <LinearLayout
+        android:id="@+id/linear_liveStreaming_watcher"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <EditText
+            android:id="@+id/edit_message_liveStreaming_watcher"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:background="@null"
+            android:hint="메세지 입력"
+            android:inputType="text"
+            android:maxLines="1"
+            android:privateImeOptions="defaultInputmode=korean" />
+
+        <ImageView
+            android:id="@+id/btn_send_liveStreaming_watcher"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:srcCompat="@drawable/send" />
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -465,12 +465,8 @@ public class Adapter_chatting extends RecyclerView.Adapter<RecyclerView.ViewHold
     }
 
     public void paging(ArrayList msg_list) { // 페이징
-
-        System.out.println(msg_list);
-        System.out.println(chatting_list);
         chatting_list.addAll(chatting_list.size()-1, msg_list);
         notifyItemRangeChanged(0, chatting_list.size());
-
     }
 
     public void updateChat(String 채팅방에있는멤버리스트_string) { // 읽음 표시
