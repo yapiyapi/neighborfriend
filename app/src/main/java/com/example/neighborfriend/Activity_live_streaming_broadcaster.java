@@ -80,13 +80,18 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
     private HashMap<String, PeerConnection> peerConnections;
 
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 1;
-    private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA};
-    private DataChannel dataChannel;
-    private MediaStream mediaStream;
+    private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
+    private DataChannel dataChannel; private MediaStream mediaStream;
+    // 비디오
+    private VideoTrack localVideoTrack; private VideoCapturer videoCapturer; private VideoSource videoSource;
+    // 오디오
+    private AudioSource audioSource; private AudioTrack localAudioTrack;
+    private SurfaceTextureHelper surfaceTextureHelper;
 
 
     private String current_user_id, current_user_name;
-    private boolean camera_front_back= true;
+    private boolean camera_front_back= false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,19 +111,22 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         btnSwitchCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                switchCammera(camera_front_back);
                 camera_front_back = !camera_front_back;
-                for (PeerConnection peerConnection : peerConnections.values()) {
-                    // stream 제거
-                    peerConnection.removeStream(mediaStream);
-                    // mediastream
-                    mediaStream=null;
-                    // renderer (출력 view) -> 제거
-                    renderer.release();
-                    // 카메라 stream 재생성
-                    // renderer 초기화 및 addSink
-                    initialize_camera(camera_front_back);
-                    peerConnection.addStream(mediaStream);
-                }
+//                for (PeerConnection peerConnection : peerConnections.values()) {
+//                    // stream 제거
+//                    peerConnection.removeStream(mediaStream);
+//                    // mediastream
+//                    mediaStream=null;
+//                    // renderer 제거
+//                    renderer.release();
+//                    // 카메라 stream 재생성
+//                    // renderer 초기화 및 addSink
+//                    initialize_camera(camera_front_back);
+//                    peerConnection.addStream(mediaStream);
+//                }
+
+
             }
         });
         // datachannel 채팅
@@ -164,7 +172,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         btnSend = binding.btnSendLiveStreaming;
         editMsg = binding.editMessageLiveStreaming;
     }
-
     private void initializeProperty() {
         /**  SharedPreferences **/
         userData = getSharedPreferences("user", MODE_PRIVATE); // sharedpreference
@@ -173,7 +180,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         current_user_name = userData.getString("nickname", "noneNickname");
 
         /** webrtc **/
-        peerConnections = new HashMap<>();
+        peerConnections = new HashMap<String, PeerConnection>();
 
         // stun server / turn server
         PeerConnection.IceServer stun = PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer();
@@ -185,98 +192,91 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
 
         // 권한
         if (checkPermissions()) {
-            // PeerConnectionFactory 설정 (video track..)
-            initialize();
-            initialize_camera(true);
-            // socket.io 연결
-            try {
-                socket = IO.socket(SERVER_URL);
-                socket.connect();
-            } catch (URISyntaxException e) {
-                e.printStackTrace();
-            }
-
-            socket.emit("broadcaster");
-
-            /** watcher **/
-            socket.on("watcher", args -> {
-                // watcher 의 id
-                String id = (String) args[0];
-
-                // PeerConnection 생성 및 addTrack
-                PeerConnection peerConnection = createPeerConnection(socket, id);
-
-                // offer 생성 및 전송 및 local description 설정
-                createAndSetLocalDescription(id, peerConnection);
-                // peerConnection 추가
-                peerConnections.put(id, peerConnection);
-
-            });
-
-
-            /** Candidate **/
-            socket.on("candidate", args -> {
-                // broadcaster id
-                String id = (String) args[0];
-                // candidate
-                String sdpMid = (String) args[1];
-                Integer sdpMLineIndex = (Integer) args[2];
-                String sdp = (String) args[3];
-
-//                        System.out.println(sdpMid);
-//                        System.out.println(sdpMLineIndex);
-//                        System.out.println(sdp);
-                // peerconnection 객체 가져오기
-                PeerConnection peerConnection = peerConnections.get(id);
-
-                // candidate 생성
-                IceCandidate candidate = new IceCandidate(sdpMid, sdpMLineIndex, sdp);
-                // candidate 추가
-                peerConnection.addIceCandidate(candidate);
-            });
-
-            /** Answer **/
-            socket.on("answer", args -> {
-                // watcher id
-                String id = (String) args[0];
-                // answer description from watcher
-                String description = (String) args[1];
-
-//                        System.out.println("answer description" + description);
-
-                // peerconnection 가져오기
-                PeerConnection peerConnection = peerConnections.get(id);
-
-                if (peerConnection != null) {
-                    // description 으로 SDP answer 생성
-                    SessionDescription remoteSdp = new SessionDescription(SessionDescription.Type.ANSWER, description);
-                    // 1. setRemoteDescription
-                    peerConnection.setRemoteDescription(new SimpleSdpObserver(), remoteSdp);
-                }
-            });
-
-
-            /** disconnectPeer **/
-            socket.on("disconnectPeer", args -> {
-                String id = (String) args[0];
-
-                // Find the corresponding PeerConnection in the HashMap and close it
-                PeerConnection peerConnection = peerConnections.get(id);
-
-                if (peerConnection != null) {
-                    peerConnection.close();
-                    peerConnections.remove(id);
-                }
-            });
-
-
-//                    getVideoTrack();
+            socketIO();
         } else {
             requestPermissions();
         }
     }
+    private void socketIO(){
+        // PeerConnectionFactory 설정 (video track..)
+        initializePeerConnection();
+        initialize_camera(true);
+//        initializeCamera();
+        // socket.io 연결
+        try {
+            socket = IO.socket(SERVER_URL);
+            socket.connect();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        socket.emit("broadcaster");
+        /** watcher **/
+        socket.on("watcher", args -> {
+            // watcher 의 id
+            String id = (String) args[0];
+            // PeerConnection 생성 및 addTrack
+            PeerConnection peerConnection = createPeerConnection(socket, id);
 
-    private void initialize() {
+            // offer 생성 및 전송 및 local description 설정
+            createAndSetLocalDescription(id, peerConnection);
+            // peerConnection 추가
+            peerConnections.put(id, peerConnection);
+
+
+        });
+        /** Candidate **/
+        socket.on("candidate", args -> {
+            // broadcaster id
+            String id = (String) args[0];
+            // candidate
+            String sdpMid = (String) args[1];
+            Integer sdpMLineIndex = (Integer) args[2];
+            String sdp = (String) args[3];
+
+//                        System.out.println(sdpMid);
+//                        System.out.println(sdpMLineIndex);
+//                        System.out.println(sdp);
+            // peerconnection 객체 가져오기
+            PeerConnection peerConnection = peerConnections.get(id);
+
+            // candidate 생성
+            IceCandidate candidate = new IceCandidate(sdpMid, sdpMLineIndex, sdp);
+            // candidate 추가
+            peerConnection.addIceCandidate(candidate);
+        });
+        /** Answer **/
+        socket.on("answer", args -> {
+            // watcher id
+            String id = (String) args[0];
+            // answer description from watcher
+            String description = (String) args[1];
+
+//                        System.out.println("answer description" + description);
+
+            // peerconnection 가져오기
+            PeerConnection peerConnection = peerConnections.get(id);
+
+            if (peerConnection != null) {
+                // description 으로 SDP answer 생성
+                SessionDescription remoteSdp = new SessionDescription(SessionDescription.Type.ANSWER, description);
+                // 1. setRemoteDescription
+                peerConnection.setRemoteDescription(new SimpleSdpObserver(), remoteSdp);
+            }
+        });
+        /** disconnectPeer **/
+        socket.on("disconnectPeer", args -> {
+            String id = (String) args[0];
+
+            // Find the corresponding PeerConnection in the HashMap and close it
+            PeerConnection peerConnection = peerConnections.get(id);
+
+            if (peerConnection != null) {
+                peerConnection.close();
+                peerConnections.remove(id);
+            }
+        });
+    }
+    private void initializePeerConnection() {
         /** PeerConnectionFactory **/
         // 로컬 미디어 스트림 생성
         // 스트림에 트랙 추가
@@ -301,42 +301,30 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                 .setVideoDecoderFactory(decoderFactory)
                 .createPeerConnectionFactory();
     }
-
     private void initialize_camera(boolean camera_front_back){
         /** 비디오 설정 **/
+        // EGL(OpenGL ES) : 렌더링 api 와 window 시스템을 연결해주는 인터페이스
+        eglBase = EglBase.create();
+        // surfaceTextureHelper : WebRTC VideoFrames 를 생성을 위한 클래스
+        surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.getEglBaseContext());
         // videoCapturer
         // 내 디바이스의 카메라에서 비디오 프레임 캡쳐
         // true : 전면,  false : 후면
-        VideoCapturer videoCapturer = createCameraCapturer(camera_front_back);
-
-        // EGL(OpenGL ES) : 렌더링 api 와 window 시스템을 연결해주는 인터페이스
-        eglBase = EglBase.create();
-
-        // surfaceTextureHelper : WebRTC VideoFrames 를 생성을 위한 클래스
-        SurfaceTextureHelper surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.getEglBaseContext());
-        // VideoCapturer 로 부터 VideoSource 를 생성
-        VideoSource videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
+        videoCapturer = createCameraCapturer(true);
+         // VideoSource (VideoCapturer 로 부터 생성)
+        videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
+        // videoCapturer 초기화
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.getCapturerObserver());
         // 카메라로부터 비디오 캡쳐를 시작한다.
         videoCapturer.startCapture(240, 320, 30);  // width,height and fps
-
-        // VideoSource 로 부터 VideoTrack 을 생성
-        VideoTrack localVideoTrack = peerConnectionFactory.createVideoTrack("100", videoSource);;
+        // 비디오 트랙 생성
+        localVideoTrack = peerConnectionFactory.createVideoTrack("100", videoSource);
         /****/
 
         /** 오디오 설정 **/
-
-
-        MediaConstraints mediaConstraints = new MediaConstraints();
-        mediaConstraints.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
-        mediaConstraints.optional.add(new MediaConstraints.KeyValuePair("googEchoCancellation", "true"));
-        mediaConstraints.optional.add(new MediaConstraints.KeyValuePair("googAutoGainControl", "true"));
-        mediaConstraints.optional.add(new MediaConstraints.KeyValuePair("googNoiseSuppression", "true"));
-        mediaConstraints.optional.add(new MediaConstraints.KeyValuePair("googHighpassFilter", "true"));
-
         // AudioSource 및 AudioTrack 생성
-        AudioSource audioSource = peerConnectionFactory.createAudioSource(mediaConstraints);
-        AudioTrack localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
+        audioSource = peerConnectionFactory.createAudioSource(new MediaConstraints());
+        localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
 //        localAudioTrack.setVolume(5); // audio volume
         localAudioTrack.setEnabled(true); // 오디오 트랙 활성화
         /****/
@@ -350,12 +338,53 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         /** 비디오 띄우기 **/
         // renderer 이니셜라이즈
         renderer.init(eglBase.getEglBaseContext(), null);
-
         // 비디오 트랙에 추가
         localVideoTrack.addSink(renderer);
         renderer.setMirror(true);
         /****/
     }
+
+    private void switchCammera(boolean isfront) {
+        videoCapturer.dispose();
+        videoSource.dispose();
+        /** 비디오 설정 **/
+        videoCapturer = createCameraCapturer(isfront);
+        videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
+        videoCapturer.initialize(surfaceTextureHelper, this, videoSource.getCapturerObserver());
+        videoCapturer.startCapture(240, 320, 30);
+        VideoTrack newVideoTrack = peerConnectionFactory.createVideoTrack("100", videoSource);
+
+        /** 오디오 설정 **/
+        // AudioSource 및 AudioTrack 생성
+        audioSource = peerConnectionFactory.createAudioSource(new MediaConstraints());
+        localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
+//        localAudioTrack.setVolume(5); // audio volume
+        localAudioTrack.setEnabled(true); // 오디오 트랙 활성화
+
+        /** mediaStream **/
+        // 제거
+        mediaStream.dispose();
+        // 초기화
+        mediaStream = peerConnectionFactory.createLocalMediaStream("mediaStream");
+        mediaStream.addTrack(newVideoTrack);
+        mediaStream.addTrack(localAudioTrack);
+
+        /** stream **/
+        for (PeerConnection peerConnection : peerConnections.values()){
+            peerConnection.removeStream(mediaStream);
+            peerConnection.addStream(mediaStream);
+        }
+
+        /** 비디오 띄우기 **/
+        // 비디오 트랙에 추가
+        localVideoTrack.removeSink(renderer);
+        newVideoTrack.addSink(renderer);
+        renderer.setMirror(true);
+        /****/
+        // 초기화
+        localVideoTrack = newVideoTrack;
+    }
+
 
     /** PeerConnection 생성 **/
     private PeerConnection createPeerConnection(Socket socket, String id) {
@@ -366,12 +395,10 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                 // icecandidate 수집시 서버에 전송
                 socket.emit("candidate", id, iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp);
             }
-
             @Override
             public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
 //                System.out.println(iceConnectionState);
             }
-
         });
 
         // DataChannel 초기화
@@ -379,7 +406,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         dataChannel.registerObserver(dataChannelObserver);
 
         peerConnection.addStream(mediaStream);
-
         return peerConnection;
     }
 
@@ -397,7 +423,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         }, new MediaConstraints());
     }
 
-
     /**
      * 생명주기
      **/
@@ -408,7 +433,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             socket.disconnect();
         }
     }
-
     /******************************************************************/
     // 간단한 SdpObserver 구현 클래스
     private static class SimpleSdpObserver implements SdpObserver {
@@ -428,7 +452,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         public void onSetFailure(String s) {
         }
     }
-
     private static class PeerConnectionAdapter implements PeerConnection.Observer {
         @Override
         public void onSignalingChange(PeerConnection.SignalingState signalingState) {
@@ -474,7 +497,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
         }
     }
-
     DataChannel.Observer dataChannelObserver = new DataChannel.Observer() {
         @Override
         public void onBufferedAmountChange(long l) {
@@ -509,11 +531,10 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             });
         }
     };
-
     /******************************************************************/
 
     /**
-     * 비디오 트랙
+     * 비디오
      **/
     // video capturer 생성하기
     private VideoCapturer createCameraCapturer(boolean isFront) {
@@ -591,8 +612,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                 }
             }
             if (allPermissionsGranted) {
-                initialize();
-                initialize_camera(true);
+                socketIO();
             }
         }
     }

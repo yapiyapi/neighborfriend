@@ -233,37 +233,34 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
             }
 
             @Override
+            public void onAddStream(MediaStream mediaStream) {
+                super.onAddStream(mediaStream);
+                System.out.println("onAddStream");
+            }
+
+            @Override
             public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
                 super.onAddTrack(rtpReceiver, mediaStreams);
                 System.out.println("onAddTrack");
+
                 if (mediaStreams != null && mediaStreams.length > 0) {
                     // Stream 에서 track 추출
                     MediaStream stream = mediaStreams[0];
-
-//                    System.out.println(stream.videoTracks.size());
-//                    System.out.println(stream.audioTracks.size());
                     // videoTrack 추가
-                    if (stream.videoTracks.size() > 0 && stream.audioTracks.size() > 0) {
-                        VideoTrack remoteVideoTrack = stream.videoTracks.get(0);
-                        AudioTrack remoteAudioTrack = stream.audioTracks.get(0);
+                    if (stream.videoTracks.size() == 1 && stream.audioTracks.size() == 1) {
+                        VideoTrack remoteVideoTrack_f = stream.videoTracks.get(0);
+
+                        // 오디오 enable
+                        stream.audioTracks.get(0).setEnabled(true);
+                        // 비디오 출력
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 // 초기화
                                 renderer.init(eglBase.getEglBaseContext(), null);
-
                                 // 비디오 track 추가
-                                remoteVideoTrack.addSink(renderer);
+                                remoteVideoTrack_f.addSink(renderer);
                                 renderer.setMirror(true); // 화면 좌우 대칭
-
-                                new Thread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        // 오디오 track 추가
-                                        remoteAudioTrack.setEnabled(true);
-                                    }
-                                }).start();
-
                             }
                         });
                     }
