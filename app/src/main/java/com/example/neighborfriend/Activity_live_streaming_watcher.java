@@ -1,8 +1,11 @@
 package com.example.neighborfriend;
 
+import static com.example.neighborfriend.Activity_live_streaming_broadcaster.SERVER_URL;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
@@ -10,6 +13,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.neighborfriend.databinding.ActivityLiveStreamingBroadcasterBinding;
 import com.example.neighborfriend.databinding.ActivityLiveStreamingWatcherBinding;
@@ -47,8 +51,6 @@ import io.socket.emitter.Emitter;
 
 public class Activity_live_streaming_watcher extends AppCompatActivity {
     private ActivityLiveStreamingWatcherBinding binding;
-    private static final String SERVER_URL = "http://43.200.4.212:4000";
-    //    private static final String SERVER_URL = "https://43.200.4.212:4000";
 
     /**
      * SharedPreferences
@@ -64,17 +66,21 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
     private Socket socket;
 
+    // webrtc
     private List<PeerConnection.IceServer> iceServers;
     private PeerConnectionFactory peerConnectionFactory;
     private PeerConnection peerConnection;
     private EglBase eglBase;
-    private ScrollView scrollview;
-    private TextView textView;
-    private SurfaceViewRenderer renderer;
-    private EditText editMsg;
-    private ImageView btnX, btnSwitchCamera, btnSend;
+    private MediaStream stream;
+
+    // view
+    private ScrollView scrollview;private TextView textView;private SurfaceViewRenderer renderer;
+    private EditText editMsg;private ImageView btnX, btnSend;
 
     private String current_user_id, current_user_name;
+    private int 밴드번호; private String 방송방_id; private String user_id;
+
+    private boolean isRendererInitialized = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,11 +114,19 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
     }
 
     private void initializeProperty() {
+        /** Intent from band **/
+        Intent intent = getIntent();
+        // 방송하는 밴드번호, 방송자 id
+        밴드번호 = intent.getIntExtra("밴드번호", 0);
+        user_id = intent.getStringExtra("id");
+        // 방송방 식별자
+        방송방_id = String.format("%d_%s", 밴드번호, user_id);
         /**  SharedPreferences **/
         userData = getSharedPreferences("user", MODE_PRIVATE); // sharedpreference
-        // 로그인 한 user id,name
+        // 로그인 한 user id, name
         current_user_id = userData.getString("id", "noneId");
         current_user_name = userData.getString("nickname", "noneNickname");
+
 
         /** webrtc **/
         try {
@@ -126,7 +140,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
         PeerConnection.IceServer turn = PeerConnection.IceServer.builder("turn:43.200.4.212").setUsername("kyh").setPassword("kyh123").createIceServer();
 
         iceServers = new ArrayList<>();
-//        iceServers.add(stun);
+        iceServers.add(stun);
         iceServers.add(turn);
 
         initialize();
@@ -141,7 +155,6 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                 // PeerConnection 생성
                 createPeerConnection(id);
 
-//                System.out.println(description);
                 // description 으로 SDP offer 생성
                 SessionDescription offer = new SessionDescription(SessionDescription.Type.OFFER, String.valueOf(description));
                 // 1. setRemoteDescription
@@ -155,8 +168,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                         // 3. setLocalDescription
                         peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
                         // 4. emit
-                        socket.emit(EVENT_ANSWER, id, sessionDescription.description);
-//                        System.out.println("Description : "+ String.valueOf(sessionDescription.description));
+                        socket.emit(EVENT_ANSWER, 방송방_id, id, sessionDescription.description);
                     }
                 }, new MediaConstraints());
 
@@ -179,19 +191,21 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
             }
         });
         // connect
-        socket.on(EVENT_CONNECT, new Emitter.Listener() {
-            @Override
-            public void call(Object... args) {
-                socket.emit(EVENT_WATCHER);
-            }
-        });
-        // broadcaster
-        socket.on(EVENT_BROADCASTER, new Emitter.Listener() {
-            @Override
-            public void call(Object... args) {
-                socket.emit(EVENT_WATCHER);
-            }
-        });
+//        socket.on(EVENT_CONNECT, new Emitter.Listener() {
+//            @Override
+//            public void call(Object... args) {
+//                socket.emit(EVENT_WATCHER, 방송방_id);
+//            }
+//        });
+//        // broadcaster
+//        socket.on(EVENT_BROADCASTER, new Emitter.Listener() {
+//            @Override
+//            public void call(Object... args) {
+//                socket.emit(EVENT_WATCHER, 방송방_id);
+//            }
+//        });
+        socket.emit(EVENT_WATCHER, 방송방_id);
+
 
     }
 
@@ -229,7 +243,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
             @Override
             public void onIceCandidate(IceCandidate candidate) {
                 // icecandidate 수집시 서버에 전송
-                socket.emit("candidate", id, candidate.sdpMid, candidate.sdpMLineIndex, candidate.sdp);
+                socket.emit("candidate", 방송방_id, id, candidate.sdpMid, candidate.sdpMLineIndex, candidate.sdp);
             }
 
             @Override
@@ -245,7 +259,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
                 if (mediaStreams != null && mediaStreams.length > 0) {
                     // Stream 에서 track 추출
-                    MediaStream stream = mediaStreams[0];
+                    stream = mediaStreams[0];
                     // videoTrack 추가
                     if (stream.videoTracks.size() == 1 && stream.audioTracks.size() == 1) {
                         VideoTrack remoteVideoTrack_f = stream.videoTracks.get(0);
@@ -257,10 +271,14 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                             @Override
                             public void run() {
                                 // 초기화
-                                renderer.init(eglBase.getEglBaseContext(), null);
+                                if(!isRendererInitialized){
+                                    renderer.init(eglBase.getEglBaseContext(), null);
+                                    isRendererInitialized = true;
+                                }
                                 // 비디오 track 추가
                                 remoteVideoTrack_f.addSink(renderer);
                                 renderer.setMirror(true); // 화면 좌우 대칭
+
                             }
                         });
                     }
@@ -269,37 +287,28 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
             @Override
             public void onDataChannel(DataChannel dataChannel) {
+                super.onDataChannel(dataChannel);
                 dataChannel.registerObserver(dataChannelObserver);
 
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        // watcher 에서 채팅 전송
                         btnSend.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
                                 String message = current_user_name+" : "+editMsg.getText().toString();
-                                if (!message.equals("") && message != null) {
+                                if (!editMsg.getText().toString().equals("") && editMsg.getText().toString() != null) {
                                     ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
                                     DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
                                     // DataChannel.buffer 전송
                                     dataChannel.send(dataBuffer);
                                     // clear
                                     editMsg.getText().clear();
-                                    textView.append(message + "\n");
-                                    // 가장 아래로 내리기
-                                    scrollview.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            scrollview.fullScroll(ScrollView.FOCUS_DOWN);
-                                        }
-                                    });
                                 }
                             }
                         });
                     }
                 });
-
             }
         });
     }
@@ -401,14 +410,25 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                     byte[] messageBytes = new byte[data.remaining()];
                     data.get(messageBytes);
                     String message = new String(messageBytes, StandardCharsets.UTF_8);
-                    textView.append(message + "\n");
-                    // 가장 아래로 내리기
-                    scrollview.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            scrollview.fullScroll(ScrollView.FOCUS_DOWN);
-                        }
-                    });
+                    // 방송 종료!!
+                    if(message.equals("STREAMING_FINISH")){
+                        stream.dispose();
+                        renderer.release();
+
+                        finish();
+                        Toast.makeText(Activity_live_streaming_watcher.this, "방송이 종료되었습니다.", Toast.LENGTH_SHORT).show();
+                    }else{
+                        // 나머지 message 는 채팅
+                        textView.append(message + "\n");
+                        // 가장 아래로 내리기
+                        scrollview.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                scrollview.fullScroll(ScrollView.FOCUS_DOWN);
+                            }
+                        });
+                    }
+
                 }
             });
 

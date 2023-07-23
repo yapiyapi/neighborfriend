@@ -243,7 +243,7 @@ public class Activity_band_introduce extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call<band> call, @NonNull Throwable t) {
                 Toast.makeText(Activity_band_introduce.this, t.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                Log.i("band_error", t.getLocalizedMessage());
+                Log.i("band_introduce_error", t.getLocalizedMessage());
             }
         });
     }
@@ -270,7 +270,7 @@ public class Activity_band_introduce extends AppCompatActivity {
                 new com.android.volley.Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Log.d("band_volley",error.toString());
+                        Log.d("band_introduce_error",error.toString());
                     }
                 }
         ) {

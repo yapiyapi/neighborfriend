@@ -2,6 +2,10 @@ package com.example.neighborfriend;
 
 import static android.content.ContentValues.TAG;
 import static android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION;
+import static com.example.neighborfriend.Activity_band_create_update.카테고리한글;
+import static com.example.neighborfriend.Activity_live_streaming_broadcaster.SERVER_URL;
+import static com.example.neighborfriend.Activity_search_box.나이포맷;
+import static com.example.neighborfriend.Activity_search_box.성별포맷;
 import static com.example.neighborfriend.MainActivity.HOST_URL;
 import static com.example.neighborfriend.MainActivity.requestQueue;
 import static com.example.neighborfriend.MainActivity.retrofitAPI;
@@ -32,6 +36,7 @@ import com.example.neighborfriend.Class.FirebaseCloudStorage;
 import com.example.neighborfriend.Class.RetrofitClass;
 import com.example.neighborfriend.Interface.RetrofitAPI;
 import com.example.neighborfriend.databinding.ActivityBandBinding;
+import com.example.neighborfriend.object.User;
 import com.example.neighborfriend.object.band;
 import com.example.neighborfriend.object.bands_post;
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -45,7 +50,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import org.jetbrains.annotations.NotNull;
+import org.webrtc.PeerConnection;
 
+import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -54,6 +61,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.socket.client.IO;
+import io.socket.client.Socket;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -70,13 +79,17 @@ public class Activity_band extends AppCompatActivity {
     Adapter_band_postList 어댑터_band_post;
     LinearLayoutManager 레이아웃매니저;
     ArrayList<bands_post> post_list;
+    /** Socket **/
+    private Socket socket;
+    // view
     private ImageView imgband, btnChat, btnSet;
     private RecyclerView recyBandPost;
     private TextView txtTitl, txtMemb, txtPubl, txtInvt;
     private Button btnwrt, btnStr;
     private String user_id, thumnail_url, 제목, 소개글, 멤버수;
+    private String user_nickname, user_thumnail_url;
     private int 카테고리, 공개여부, 나이제한_시작, 나이제한_끝, 성별제한;
-    private int 밴드번호;
+    private int 밴드번호; private String 방송자_id;
     private String 밴드jsonString, Activity_from;
     private Uri 초대링크;
 
@@ -95,6 +108,20 @@ public class Activity_band extends AppCompatActivity {
         setContentView(binding.getRoot());
         initializeView();
         initializeProperty();
+
+        try {
+            socket = IO.socket(SERVER_URL);
+            socket.connect();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+        socket.emit("check_start_streaming", String.valueOf(밴드번호));
+        /** 방송중 **/
+        socket.on("streaming", args -> {
+            // watcher id
+            방송자_id = (String) args[0];
+            Retrofit_user(방송자_id);
+        });
 
         // 초대
         txtInvt.setOnClickListener(new View.OnClickListener() {
@@ -127,6 +154,7 @@ public class Activity_band extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(Activity_band.this, Activity_live_streaming_broadcaster.class);
+                intent.putExtra("밴드번호", 밴드번호);
                 startActivity(intent);
             }
         });
@@ -281,11 +309,8 @@ public class Activity_band extends AppCompatActivity {
                     btnSet.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-//                            Intent intent = new Intent(Activity_band.this, Activity_band_setting.class);
-//                            intent.putExtra("밴드정보", 밴드jsonString);
-//                            startActivity(intent);
-
-                            Intent intent = new Intent(Activity_band.this, Activity_live_streaming_watcher.class);
+                            Intent intent = new Intent(Activity_band.this, Activity_band_setting.class);
+                            intent.putExtra("밴드정보", 밴드jsonString);
                             startActivity(intent);
                         }
                     });
@@ -325,6 +350,7 @@ public class Activity_band extends AppCompatActivity {
                         bands_post_1.setCreated_at(band_list.get(i).getCreated_at());
                         bands_post_1.setNickname(band_list.get(i).getNickname());
                         bands_post_1.setThumnail_url(band_list.get(i).getThumnail_url());
+                        bands_post_1.setViewType(0);
                         // list 에 bands_post object 추가
                         post_list.add(bands_post_1);
 
@@ -349,6 +375,14 @@ public class Activity_band extends AppCompatActivity {
                             intent.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
                             intent.putExtra("밴드번호", 밴드번호);
                             intent.putExtra("seq", seq);
+                            startActivity(intent);
+                        }
+
+                        @Override
+                        public void onItemClick(View v, int 밴드번호, String id) {
+                            Intent intent = new Intent(Activity_band.this, Activity_live_streaming_watcher.class);
+                            intent.putExtra("밴드번호", 밴드번호);
+                            intent.putExtra("id", id);
                             startActivity(intent);
                         }
                     });
@@ -407,6 +441,42 @@ public class Activity_band extends AppCompatActivity {
         // 이전 결과가 있더라도 새로 요청
         request.setShouldCache(false);
         requestQueue.add(request);
+    }
+    private void Retrofit_user(final String user_id){
+        retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
+        Call<User> call = retrofitAPI.getUser(user_id);
+
+        call.enqueue(new Callback<User>() {
+            @Override
+            public void onResponse(@NotNull Call<User> call, @NotNull Response<User> response) {
+                // 서버에서 응답을 받아옴
+                if (response.isSuccessful() && response.body() != null) {
+
+                    user_thumnail_url = response.body().getThumnail_url();
+                    user_nickname = response.body().getNickname();
+
+                    bands_post bands_post_1 = new bands_post();
+                    bands_post_1.setBand_seq(밴드번호);
+                    bands_post_1.setUser_id(방송자_id);
+                    bands_post_1.setNickname(user_nickname);
+                    bands_post_1.setThumnail_url(user_thumnail_url);
+//            bands_post_1.setUpdated_at();
+//            bands_post_1.setImage_uri();
+                    bands_post_1.setViewType(1);
+                    // list 에 bands_post object 추가
+                    post_list.add(0, bands_post_1);
+
+                } else {
+                    Toast.makeText(Activity_band.this, "실패_ㅁㄴㅇ리ㅓㅁㄴㅇ라", Toast.LENGTH_SHORT).show();
+                }
+            }
+            // 통신실패시
+            @Override
+            public void onFailure(@NonNull Call<User> call, @NonNull Throwable t) {
+                Toast.makeText(Activity_band.this, t.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                Log.i("band_error", t.getLocalizedMessage());
+            }
+        });
     }
 
     public static String 시간포멧to몇분전(String db_time) throws ParseException {

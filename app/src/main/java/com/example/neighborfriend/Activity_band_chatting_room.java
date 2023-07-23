@@ -2,6 +2,7 @@ package com.example.neighborfriend;
 
 import static android.content.ContentValues.TAG;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
@@ -142,6 +143,17 @@ public class Activity_band_chatting_room extends AppCompatActivity {
         btnBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                // 소켓에 전달
+                sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
+                        SPECIAL, "채팅방나가기", null);
+
+                finish();
+            }
+        });
+        // onbackpress
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
                 // 소켓에 전달
                 sendMessage(밴드번호, 채팅방_seq, current_user_id, current_user_name,
                         SPECIAL, "채팅방나가기", null);

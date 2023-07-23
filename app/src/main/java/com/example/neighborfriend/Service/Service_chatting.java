@@ -40,7 +40,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class Service_chatting extends Service {
-    private static final String SERVER_HOST = "192.168.1.11";
+    private static final String SERVER_HOST = "192.168.1.25";
 //    private static final String SERVER_HOST = "192.168.0.3";
     private static final int SERVER_PORT = 8888;
     /**

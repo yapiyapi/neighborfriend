@@ -1,8 +1,15 @@
 package com.example.neighborfriend;
 
+import androidx.activity.OnBackPressedCallback;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -18,6 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
 import com.example.neighborfriend.databinding.ActivityLiveStreamingBroadcasterBinding;
+import com.kakao.sdk.user.UserApiClient;
 
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -29,6 +37,8 @@ import java.util.List;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 import org.webrtc.AudioDecoderFactoryFactory;
 import org.webrtc.AudioEncoderFactoryFactory;
@@ -65,12 +75,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
      * SharedPreferences
      **/
     SharedPreferences userData;
-    private static final String SERVER_URL = "http://43.200.4.212:4000";
-    private ScrollView scrollview;
-    private TextView textView;
-    private SurfaceViewRenderer renderer;
-    private EditText editMsg;
-    private ImageView btnX, btnSwitchCamera, btnSend;
+    public static final String SERVER_URL = "http://43.200.4.212:4000";
 
     private EglBase eglBase;
 
@@ -81,17 +86,22 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
 
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 1;
     private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
-    private DataChannel dataChannel; private MediaStream mediaStream;
+    private ArrayList<DataChannel> dataChannels;
+    private MediaStream mediaStream;
     // 비디오
     private VideoTrack localVideoTrack; private VideoCapturer videoCapturer; private VideoSource videoSource;
     // 오디오
     private AudioSource audioSource; private AudioTrack localAudioTrack;
     private SurfaceTextureHelper surfaceTextureHelper;
 
+    // view
+    private ScrollView scrollview; private TextView textView; private SurfaceViewRenderer renderer;
+    private EditText editMsg; private ImageView btnX, btnMic, btnSwitchCamera, btnSend;
 
     private String current_user_id, current_user_name;
     private boolean camera_front_back= false;
 
+    private int 밴드번호; private String 방송방_id;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,7 +115,48 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         // 나가기
         btnX.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {finish();}
+            public void onClick(View v) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+                builder.setTitle("방송종료"); //AlertDialog의 제목 부분
+                builder.setMessage("정말로 방송을 종료 하시겠습니까?"); //AlertDialog의 내용 부분
+                builder.setPositiveButton("예", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // Socket.io
+                        if (socket != null && socket.connected()) {
+                            socket.emit("EndBroadcast", 방송방_id);
+                        }
+                        // Camera
+                        releaseCamera();
+                        finish();
+                        // 다른 Peer 에게 '방송 종료' 알림
+                        for(DataChannel dataChannel1 : dataChannels){
+                            String message = "STREAMING_FINISH";
+                            // utf-8 포맷 및 buffer 생성
+                            ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
+                            DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                            // buffer 보내고 나면 초기화 됨
+                            // for 문 돌때마다 계속 생성해줘야 함
+                            dataChannel1.send(dataBuffer);
+                        }
+                    }
+                });
+                builder.setNegativeButton("아니오", null);
+                builder.create().show(); //보이기
+            }
+        });
+        // 마이크 설정
+        btnMic.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(localAudioTrack.enabled()){
+                    localAudioTrack.setEnabled(false);
+                    btnMic.setImageResource(R.drawable.mic_off);
+                }else{
+                    localAudioTrack.setEnabled(true);
+                    btnMic.setImageResource(R.drawable.mic_on);
+                }
+            }
         });
         // 카메라 전환
         btnSwitchCamera.setOnClickListener(new View.OnClickListener() {
@@ -113,20 +164,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             public void onClick(View v) {
                 switchCammera(camera_front_back);
                 camera_front_back = !camera_front_back;
-//                for (PeerConnection peerConnection : peerConnections.values()) {
-//                    // stream 제거
-//                    peerConnection.removeStream(mediaStream);
-//                    // mediastream
-//                    mediaStream=null;
-//                    // renderer 제거
-//                    renderer.release();
-//                    // 카메라 stream 재생성
-//                    // renderer 초기화 및 addSink
-//                    initialize_camera(camera_front_back);
-//                    peerConnection.addStream(mediaStream);
-//                }
-
-
             }
         });
         // datachannel 채팅
@@ -134,11 +171,18 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 String message = current_user_name+" : "+editMsg.getText().toString();
-                if (!message.equals("") && message != null) {
-                    ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
-                    DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
-                    // DataChannel.buffer 전송
-                    dataChannel.send(dataBuffer);
+                // 비었는지 확인
+                if (!editMsg.getText().toString().equals("") && editMsg.getText().toString() != null) {
+                    // 모든 Peer 에게 전송
+                    for(DataChannel dataChannel1 : dataChannels){
+                        // utf-8 포맷 및 buffer 생성
+                        ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
+                        DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                        // buffer 보내고 나면 초기화 됨
+                        // for 문 돌때마다 계속 생성해줘야 함
+                        dataChannel1.send(dataBuffer);
+                    }
                     // clear
                     editMsg.getText().clear();
                     textView.append(message + "\n");
@@ -154,14 +198,42 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         });
 
 
-    }
+        // 화면 꺼졌을 때
+        IntentFilter screenStateFilter = new IntentFilter();
+        screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        screenStateFilter.addAction(Intent.ACTION_SCREEN_ON);
+        registerReceiver(screenStateReceiver, screenStateFilter);
 
+        // onbackpress
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(Activity_live_streaming_broadcaster.this);
+                builder.setTitle("종료"); //AlertDialog의 제목 부분
+                builder.setMessage("정말로 종료 하시겠습니까?"); //AlertDialog의 내용 부분
+                builder.setPositiveButton("예", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // Socket.io
+                        if (socket != null && socket.connected()) {
+                            socket.emit("EndBroadcast", 방송방_id);
+                        }
+                        // Camera
+                        releaseCamera();
+                        finish();
+                    }
+                });
+                builder.setNegativeButton("아니오", null);
+                builder.create().show(); //보이기
+            }
+        });
+    }
     /**
      * initial
      **/
     private void initializeView() {
         /** binding **/
         btnX = binding.btnXLiveStreaming;
+        btnMic = binding.btnMicLiveStreaming;
         btnSwitchCamera = binding.btnSwitchCameraLiveStreaming;
 
         renderer = binding.surfaceViewBroadcaster;
@@ -173,21 +245,28 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         editMsg = binding.editMessageLiveStreaming;
     }
     private void initializeProperty() {
+        /** Intent **/
+        Intent intent = getIntent();
+        밴드번호 = intent.getIntExtra("밴드번호", 0);
         /**  SharedPreferences **/
         userData = getSharedPreferences("user", MODE_PRIVATE); // sharedpreference
-        // 로그인 한 user id,name
+        // 로그인 한 user id, name
         current_user_id = userData.getString("id", "noneId");
         current_user_name = userData.getString("nickname", "noneNickname");
 
+        // 방송방 식별자
+        방송방_id = String.format("%d_%s", 밴드번호, current_user_id);
+
         /** webrtc **/
         peerConnections = new HashMap<String, PeerConnection>();
+        dataChannels = new ArrayList<DataChannel>();
 
         // stun server / turn server
         PeerConnection.IceServer stun = PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer();
         PeerConnection.IceServer turn = PeerConnection.IceServer.builder("turn:43.200.4.212").setUsername("kyh").setPassword("kyh123").createIceServer();
 
         iceServers = new ArrayList<>();
-//        iceServers.add(stun);
+        iceServers.add(stun);
         iceServers.add(turn);
 
         // 권한
@@ -200,7 +279,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
     private void socketIO(){
         // PeerConnectionFactory 설정 (video track..)
         initializePeerConnection();
-        initialize_camera(true);
+        initialize_camera();
 //        initializeCamera();
         // socket.io 연결
         try {
@@ -209,20 +288,19 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
-        socket.emit("broadcaster");
+        socket.emit("broadcaster", 방송방_id);
         /** watcher **/
         socket.on("watcher", args -> {
             // watcher 의 id
-            String id = (String) args[0];
+            String watcher_id = (String) args[0];
             // PeerConnection 생성 및 addTrack
-            PeerConnection peerConnection = createPeerConnection(socket, id);
+            PeerConnection peerConnection = createPeerConnection(socket, watcher_id);
 
             // offer 생성 및 전송 및 local description 설정
-            createAndSetLocalDescription(id, peerConnection);
+            createAndSetLocalDescription(watcher_id, peerConnection);
             // peerConnection 추가
-            peerConnections.put(id, peerConnection);
-
-
+            peerConnections.put(watcher_id, peerConnection);
+            
         });
         /** Candidate **/
         socket.on("candidate", args -> {
@@ -232,10 +310,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             String sdpMid = (String) args[1];
             Integer sdpMLineIndex = (Integer) args[2];
             String sdp = (String) args[3];
-
-//                        System.out.println(sdpMid);
-//                        System.out.println(sdpMLineIndex);
-//                        System.out.println(sdp);
             // peerconnection 객체 가져오기
             PeerConnection peerConnection = peerConnections.get(id);
 
@@ -251,8 +325,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             // answer description from watcher
             String description = (String) args[1];
 
-//                        System.out.println("answer description" + description);
-
             // peerconnection 가져오기
             PeerConnection peerConnection = peerConnections.get(id);
 
@@ -265,19 +337,15 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         });
         /** disconnectPeer **/
         socket.on("disconnectPeer", args -> {
-            String id = (String) args[0];
-
-            // Find the corresponding PeerConnection in the HashMap and close it
-            PeerConnection peerConnection = peerConnections.get(id);
-
-            if (peerConnection != null) {
+            // 모든 peerconnection 종료 및 제거
+            for(PeerConnection peerConnection : peerConnections.values()){
                 peerConnection.close();
-                peerConnections.remove(id);
             }
+            peerConnections.clear();
         });
     }
     private void initializePeerConnection() {
-        /** PeerConnectionFactory **/
+        /** PeerConnectionFactory 초기화 **/
         // 로컬 미디어 스트림 생성
         // 스트림에 트랙 추가
         // remote peer 에 연결
@@ -301,7 +369,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                 .setVideoDecoderFactory(decoderFactory)
                 .createPeerConnectionFactory();
     }
-    private void initialize_camera(boolean camera_front_back){
+    private void initialize_camera(){
         /** 비디오 설정 **/
         // EGL(OpenGL ES) : 렌더링 api 와 window 시스템을 연결해주는 인터페이스
         eglBase = EglBase.create();
@@ -337,16 +405,31 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
 
         /** 비디오 띄우기 **/
         // renderer 이니셜라이즈
-        renderer.init(eglBase.getEglBaseContext(), null);
+        renderer.init(eglBase.getEglBaseContext(),null);
         // 비디오 트랙에 추가
         localVideoTrack.addSink(renderer);
         renderer.setMirror(true);
         /****/
     }
-
     private void switchCammera(boolean isfront) {
-        videoCapturer.dispose();
-        videoSource.dispose();
+        releaseCamera();
+        createCameraStream(isfront);
+    }
+
+    private final BroadcastReceiver screenStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction() != null) {
+                if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+                    releaseCamera();
+                } else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
+                    createCameraStream(!camera_front_back);
+                }
+            }
+        }
+    };
+    // 메서드
+    private void createCameraStream(boolean isfront){
         /** 비디오 설정 **/
         videoCapturer = createCameraCapturer(isfront);
         videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
@@ -362,8 +445,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         localAudioTrack.setEnabled(true); // 오디오 트랙 활성화
 
         /** mediaStream **/
-        // 제거
-        mediaStream.dispose();
         // 초기화
         mediaStream = peerConnectionFactory.createLocalMediaStream("mediaStream");
         mediaStream.addTrack(newVideoTrack);
@@ -384,7 +465,11 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         // 초기화
         localVideoTrack = newVideoTrack;
     }
-
+    private void releaseCamera(){
+        videoCapturer.dispose();
+        videoSource.dispose();
+        mediaStream.dispose();
+    }
 
     /** PeerConnection 생성 **/
     private PeerConnection createPeerConnection(Socket socket, String id) {
@@ -393,7 +478,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             @Override
             public void onIceCandidate(IceCandidate iceCandidate) {
                 // icecandidate 수집시 서버에 전송
-                socket.emit("candidate", id, iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp);
+                socket.emit("candidate", 방송방_id, id, iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp);
             }
             @Override
             public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
@@ -402,8 +487,11 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         });
 
         // DataChannel 초기화
-        dataChannel = peerConnection.createDataChannel("chat", new DataChannel.Init());
+        DataChannel dataChannel = peerConnection.createDataChannel("chat"+id, new DataChannel.Init());
         dataChannel.registerObserver(dataChannelObserver);
+
+        // Arraylist 에 추가
+        dataChannels.add(dataChannel);
 
         peerConnection.addStream(mediaStream);
         return peerConnection;
@@ -417,22 +505,11 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                 // setLocalDescription
                 peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
                 // 서버에 만들어진 sdp 전송
-                socket.emit("offer", id, sessionDescription.description);
-//                System.out.println("description : "+sessionDescription.description);
+                socket.emit("offer", 방송방_id, id, sessionDescription.description);
             }
         }, new MediaConstraints());
     }
 
-    /**
-     * 생명주기
-     **/
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (socket != null && socket.connected()) {
-            socket.disconnect();
-        }
-    }
     /******************************************************************/
     // 간단한 SdpObserver 구현 클래스
     private static class SimpleSdpObserver implements SdpObserver {
@@ -515,10 +592,24 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    // 받은 buffer data ( binary )
                     ByteBuffer data = buffer.data;
                     byte[] messageBytes = new byte[data.remaining()];
                     data.get(messageBytes);
+
+                    // 각 Peer 로 부터 받은 메세지 ( UTF-8 포맷 )
                     String message = new String(messageBytes, StandardCharsets.UTF_8);
+                    // 각 Peer 에게 다시 전송
+                    for(DataChannel dataChannel1 : dataChannels){
+                        // utf-8 포맷 및 buffer 생성
+                        ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
+                        DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                        // buffer 보내고 나면 초기화 됨
+                        // for 문 돌때마다 계속 생성해줘야 함
+                        dataChannel1.send(dataBuffer);
+                    }
+                    // Broadcaster 부분에도 추가
                     textView.append(message + "\n");
                     // 가장 아래로 내리기
                     scrollview.post(new Runnable() {
@@ -584,6 +675,8 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         return null;
     }
 
+    /** 카메라 **/
+
     /**
      * 권한
      **/
@@ -616,4 +709,5 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             }
         }
     }
+
 }

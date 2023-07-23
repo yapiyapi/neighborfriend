@@ -32,6 +32,8 @@ public class bands_post {
     @SerializedName("thumnail_url")
     private String thumnail_url;
 
+    private Integer viewType;
+
     public int getBand_seq() {
         return band_seq;
     }
@@ -101,5 +103,13 @@ public class bands_post {
 
     public void setThumnail_url(String thumnail_url) {
         this.thumnail_url = thumnail_url;
+    }
+
+    public Integer getViewType() {
+        return viewType;
+    }
+
+    public void setViewType(Integer viewType) {
+        this.viewType = viewType;
     }
 }

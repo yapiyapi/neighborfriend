@@ -28,6 +28,10 @@ public interface RetrofitAPI {
     Call<User> sendData(
             @Field("id") String id
     );
+    @GET("band/read_user.php")                   // 읽기
+    Call<User> getUser(
+            @Query("user_id") String user_id
+    );
     // Fragment home -----------------------------------------------------------
     @FormUrlEncoded
     @POST("frag/homemyband.php")             // 읽기
