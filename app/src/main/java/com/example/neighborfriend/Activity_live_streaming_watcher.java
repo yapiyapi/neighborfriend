@@ -420,6 +420,8 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                     }else{
                         // 나머지 message 는 채팅
                         textView.append(message + "\n");
+
+                        System.out.println("hi");
                         System.out.println("hi");
                         // 가장 아래로 내리기
                         scrollview.post(new Runnable() {
