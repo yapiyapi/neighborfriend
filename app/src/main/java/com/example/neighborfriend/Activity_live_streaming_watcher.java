@@ -63,6 +63,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
     private static final String EVENT_CONNECT = "connect";
     private static final String EVENT_BROADCASTER = "broadcaster";
     private static final String EVENT_WATCHER = "watcher";
+    private static final String EVENT_disconnect = "disconnectPeer";
 
     private Socket socket;
 
@@ -130,7 +131,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
         /** webrtc **/
         try {
-            socket = IO.socket(SERVER_URL);
+            socket = IO.socket(SERVER_URL); // 소켓 생성 및 연결
             socket.connect();
         } catch (URISyntaxException e) {
             e.printStackTrace();
@@ -157,17 +158,17 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
                 // description 으로 SDP offer 생성
                 SessionDescription offer = new SessionDescription(SessionDescription.Type.OFFER, String.valueOf(description));
-                // 1. setRemoteDescription
+                // 1. RemoteDescription 설정
                 peerConnection.setRemoteDescription(new SimpleSdpObserver(), offer);
 
-                // 2. Create an answer
+                // 2. answer 생성
                 peerConnection.createAnswer(new SimpleSdpObserver() {
                     @Override
                     public void onCreateSuccess(SessionDescription sessionDescription) {
                         super.onCreateSuccess(sessionDescription);
-                        // 3. setLocalDescription
+                        // 3. LocalDescription 설정
                         peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
-                        // 4. emit
+                        // 4. 전송
                         socket.emit(EVENT_ANSWER, 방송방_id, id, sessionDescription.description);
                     }
                 }, new MediaConstraints());
@@ -190,20 +191,13 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                 peerConnection.addIceCandidate(candidate);
             }
         });
-        // connect
-//        socket.on(EVENT_CONNECT, new Emitter.Listener() {
-//            @Override
-//            public void call(Object... args) {
-//                socket.emit(EVENT_WATCHER, 방송방_id);
-//            }
-//        });
-//        // broadcaster
-//        socket.on(EVENT_BROADCASTER, new Emitter.Listener() {
-//            @Override
-//            public void call(Object... args) {
-//                socket.emit(EVENT_WATCHER, 방송방_id);
-//            }
-//        });
+        socket.on(EVENT_disconnect, new Emitter.Listener() {
+            @Override
+            public void call(Object... args) {
+                socket.disconnect();
+            }
+        });
+
         socket.emit(EVENT_WATCHER, 방송방_id);
 
 
@@ -260,7 +254,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                 if (mediaStreams != null && mediaStreams.length > 0) {
                     // Stream 에서 track 추출
                     stream = mediaStreams[0];
-                    // videoTrack 추가
+                    // videoTrack 추가 ( video, audio 모두 있을 때 )
                     if (stream.videoTracks.size() == 1 && stream.audioTracks.size() == 1) {
                         VideoTrack remoteVideoTrack_f = stream.videoTracks.get(0);
 
@@ -412,17 +406,11 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                     String message = new String(messageBytes, StandardCharsets.UTF_8);
                     // 방송 종료!!
                     if(message.equals("STREAMING_FINISH")){
-                        stream.dispose();
-                        renderer.release();
-
-                        finish();
                         Toast.makeText(Activity_live_streaming_watcher.this, "방송이 종료되었습니다.", Toast.LENGTH_SHORT).show();
+                        finish();
                     }else{
                         // 나머지 message 는 채팅
                         textView.append(message + "\n");
-
-                        System.out.println("hi");
-                        System.out.println("hi");
                         // 가장 아래로 내리기
                         scrollview.post(new Runnable() {
                             @Override
@@ -445,19 +433,22 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
+        if (stream != null) stream.dispose();
+        if (renderer != null) renderer.release();
+
         // Close the socket connection
         socket.disconnect();
         socket.close();
 
         // Close the PeerConnection
-        if (peerConnection != null) {
-            peerConnection.close();
-        }
-        if (peerConnectionFactory != null) {
-            peerConnectionFactory.dispose();
-        }
-        if (eglBase != null) {
-            eglBase.release();
-        }
+//        if (peerConnection != null) {
+//            peerConnection.close();
+//        }
+//        if (peerConnectionFactory != null) {
+//            peerConnectionFactory.dispose();
+//        }
+//        if (eglBase != null) {
+//            eglBase.release();
+//        }
     }
 }

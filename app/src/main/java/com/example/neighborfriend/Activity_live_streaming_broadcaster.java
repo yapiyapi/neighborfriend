@@ -116,6 +116,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         btnX.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                // 방송 종료 버튼
                 AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
                 builder.setTitle("방송종료"); //AlertDialog의 제목 부분
                 builder.setMessage("정말로 방송을 종료 하시겠습니까?"); //AlertDialog의 내용 부분
@@ -123,7 +124,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                     public void onClick(DialogInterface dialog, int id) {
                         // Socket.io
                         if (socket != null && socket.connected()) {
-                            socket.emit("EndBroadcast", 방송방_id);
+                            socket.disconnect();
                         }
                         // Camera
                         releaseCamera();
@@ -150,6 +151,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(localAudioTrack.enabled()){
+                    // 오디오 track 설정 및 리소스 변경
                     localAudioTrack.setEnabled(false);
                     btnMic.setImageResource(R.drawable.mic_off);
                 }else{
@@ -215,7 +217,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                     public void onClick(DialogInterface dialog, int id) {
                         // Socket.io
                         if (socket != null && socket.connected()) {
-                            socket.emit("EndBroadcast", 방송방_id);
+                            socket.disconnect();
                         }
                         // Camera
                         releaseCamera();
@@ -412,10 +414,12 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         /****/
     }
     private void switchCammera(boolean isfront) {
+        // 카메라 종료 및 재생성
         releaseCamera();
         createCameraStream(isfront);
     }
 
+    // 화면 꺼졌을 때 event
     private final BroadcastReceiver screenStateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -489,11 +493,12 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         // DataChannel 초기화
         DataChannel dataChannel = peerConnection.createDataChannel("chat"+id, new DataChannel.Init());
         dataChannel.registerObserver(dataChannelObserver);
-
         // Arraylist 에 추가
         dataChannels.add(dataChannel);
 
+        // Stream 추가
         peerConnection.addStream(mediaStream);
+
         return peerConnection;
     }
 
@@ -502,7 +507,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         peerConnection.createOffer(new SimpleSdpObserver() {
             @Override
             public void onCreateSuccess(SessionDescription sessionDescription) {
-                // setLocalDescription
+                // LocalDescription 설정
                 peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
                 // 서버에 만들어진 sdp 전송
                 socket.emit("offer", 방송방_id, id, sessionDescription.description);
@@ -514,77 +519,45 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
     // 간단한 SdpObserver 구현 클래스
     private static class SimpleSdpObserver implements SdpObserver {
         @Override
-        public void onCreateSuccess(SessionDescription sessionDescription) {
-        }
-
+        public void onCreateSuccess(SessionDescription sessionDescription) {}
         @Override
-        public void onSetSuccess() {
-        }
-
+        public void onSetSuccess() {}
         @Override
-        public void onCreateFailure(String s) {
-        }
-
+        public void onCreateFailure(String s) {}
         @Override
-        public void onSetFailure(String s) {
-        }
+        public void onSetFailure(String s) {}
     }
     private static class PeerConnectionAdapter implements PeerConnection.Observer {
         @Override
-        public void onSignalingChange(PeerConnection.SignalingState signalingState) {
-        }
-
+        public void onSignalingChange(PeerConnection.SignalingState signalingState) {}
         @Override
-        public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-        }
-
+        public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {}
         @Override
-        public void onIceConnectionReceivingChange(boolean b) {
-        }
-
+        public void onIceConnectionReceivingChange(boolean b) {}
         @Override
-        public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
-        }
-
+        public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {}
         @Override
-        public void onIceCandidate(IceCandidate iceCandidate) {
-        }
-
+        public void onIceCandidate(IceCandidate iceCandidate) {}
         @Override
-        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
-        }
-
+        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {}
         @Override
-        public void onAddStream(MediaStream mediaStream) {
-        }
-
+        public void onAddStream(MediaStream mediaStream) {}
         @Override
-        public void onRemoveStream(MediaStream mediaStream) {
-        }
-
+        public void onRemoveStream(MediaStream mediaStream) {}
         @Override
-        public void onDataChannel(DataChannel dataChannel) {
-        }
-
+        public void onDataChannel(DataChannel dataChannel) {}
         @Override
-        public void onRenegotiationNeeded() {
-        }
-
+        public void onRenegotiationNeeded() {}
         @Override
-        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
-        }
+        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {}
     }
     DataChannel.Observer dataChannelObserver = new DataChannel.Observer() {
         @Override
-        public void onBufferedAmountChange(long l) {
-            System.out.println("onBufferedAmountChange_datachannel");
-        }
-
+        public void onBufferedAmountChange(long l) {System.out.println("onBufferedAmountChange_datachannel");}
         @Override
         public void onStateChange() {
             System.out.println("onStateChange_datachannel");
         }
-
         @Override
         public void onMessage(DataChannel.Buffer buffer) {
             System.out.println("onMessage_datachannel");

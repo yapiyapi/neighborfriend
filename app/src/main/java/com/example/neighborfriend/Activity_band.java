@@ -109,20 +109,6 @@ public class Activity_band extends AppCompatActivity {
         initializeView();
         initializeProperty();
 
-        try {
-            socket = IO.socket(SERVER_URL);
-            socket.connect();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-        socket.emit("check_start_streaming", String.valueOf(밴드번호));
-        /** 방송중 **/
-        socket.on("streaming", args -> {
-            // watcher id
-            방송자_id = (String) args[0];
-            Retrofit_user(방송자_id);
-        });
-
         // 초대
         txtInvt.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -361,31 +347,22 @@ public class Activity_band extends AppCompatActivity {
 //                    GridLayoutManager layoutManager = new GridLayoutManager(Activity_band.this, 1);
 
 
-                    /** 어댑터 연결 **/
-                    레이아웃매니저 = new LinearLayoutManager(Activity_band.this);
-                    어댑터_band_post = new Adapter_band_postList(post_list);
-                    recyBandPost.setLayoutManager(레이아웃매니저);
-                    recyBandPost.setAdapter(어댑터_band_post);
-
-                    //리사이클러뷰 화면전환
-                    어댑터_band_post.setOnItemClickListener(new Adapter_band_postList.OnItemClickListener() {
-                        @Override
-                        public void onItemClick(View v, int 밴드번호, int seq) {
-                            Intent intent = new Intent(v.getContext(), Activity_band_post.class);
-                            intent.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
-                            intent.putExtra("밴드번호", 밴드번호);
-                            intent.putExtra("seq", seq);
-                            startActivity(intent);
-                        }
-
-                        @Override
-                        public void onItemClick(View v, int 밴드번호, String id) {
-                            Intent intent = new Intent(Activity_band.this, Activity_live_streaming_watcher.class);
-                            intent.putExtra("밴드번호", 밴드번호);
-                            intent.putExtra("id", id);
-                            startActivity(intent);
-                        }
+                    /** socket 통신 **/
+                    // 현재 방송중인 방송방 확인
+                    try {
+                        socket = IO.socket(SERVER_URL);
+                        socket.connect();
+                    } catch (URISyntaxException e) {
+                        e.printStackTrace();
+                    }
+                    socket.emit("check_start_streaming", String.valueOf(밴드번호));
+                    /** 방송중 **/
+                    socket.on("streaming", args -> {
+                        // watcher id
+                        방송자_id = (String) args[0];
+                        Retrofit_user(방송자_id);
                     });
+
 
 
                 } else {
@@ -457,14 +434,42 @@ public class Activity_band extends AppCompatActivity {
 
                     bands_post bands_post_1 = new bands_post();
                     bands_post_1.setBand_seq(밴드번호);
-                    bands_post_1.setUser_id(방송자_id);
+                    bands_post_1.setUser_id(user_id);
                     bands_post_1.setNickname(user_nickname);
                     bands_post_1.setThumnail_url(user_thumnail_url);
 //            bands_post_1.setUpdated_at();
 //            bands_post_1.setImage_uri();
                     bands_post_1.setViewType(1);
                     // list 에 bands_post object 추가
-                    post_list.add(0, bands_post_1);
+                    if(post_list.size()==0) post_list.add(bands_post_1);
+                    else post_list.add(0, bands_post_1);
+
+
+                    /** 어댑터 연결 **/
+                    레이아웃매니저 = new LinearLayoutManager(Activity_band.this);
+                    어댑터_band_post = new Adapter_band_postList(post_list);
+                    recyBandPost.setLayoutManager(레이아웃매니저);
+                    recyBandPost.setAdapter(어댑터_band_post);
+
+                    //리사이클러뷰 화면전환
+                    어댑터_band_post.setOnItemClickListener(new Adapter_band_postList.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(View v, int 밴드번호, int seq) {
+                            Intent intent = new Intent(v.getContext(), Activity_band_post.class);
+                            intent.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
+                            intent.putExtra("밴드번호", 밴드번호);
+                            intent.putExtra("seq", seq);
+                            startActivity(intent);
+                        }
+
+                        @Override
+                        public void onItemClick(View v, int 밴드번호, String id) {
+                            Intent intent = new Intent(Activity_band.this, Activity_live_streaming_watcher.class);
+                            intent.putExtra("밴드번호", 밴드번호);
+                            intent.putExtra("id", id);
+                            startActivity(intent);
+                        }
+                    });
 
                 } else {
                     Toast.makeText(Activity_band.this, "실패_ㅁㄴㅇ리ㅓㅁㄴㅇ라", Toast.LENGTH_SHORT).show();
