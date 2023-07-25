@@ -363,6 +363,7 @@ public class Activity_band extends AppCompatActivity {
                         Retrofit_user(방송자_id);
                         System.out.println("adshfiahdf");
                         System.out.println("adshfiahdf");
+                        System.out.println("adshfiahdf");
                     });
 
 
