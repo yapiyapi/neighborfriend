@@ -20,6 +20,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -34,6 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -77,8 +80,8 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
     SharedPreferences userData;
     public static final String SERVER_URL = "http://43.200.4.212:4000";
 
+    // webrtc
     private EglBase eglBase;
-
     private PeerConnectionFactory peerConnectionFactory;
     private Socket socket;
     private List<PeerConnection.IceServer> iceServers;
@@ -87,6 +90,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 1;
     private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
     private ArrayList<DataChannel> dataChannels;
+
     private MediaStream mediaStream;
     // 비디오
     private VideoTrack localVideoTrack; private VideoCapturer videoCapturer; private VideoSource videoSource;
@@ -101,7 +105,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
     private String current_user_id, current_user_name;
     private boolean camera_front_back= false;
 
-    private int 밴드번호; private String 방송방_id;
+    private int 밴드번호; private String 방송방_id; private String 보내는message;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,9 +135,9 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                         finish();
                         // 다른 Peer 에게 '방송 종료' 알림
                         for(DataChannel dataChannel1 : dataChannels){
-                            String message = "STREAMING_FINISH";
+                            보내는message = "STREAMING_FINISH";
                             // utf-8 포맷 및 buffer 생성
-                            ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
+                            ByteBuffer buffer = ByteBuffer.wrap(보내는message.getBytes(StandardCharsets.UTF_8));
                             DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
 
                             // buffer 보내고 나면 초기화 됨
@@ -172,22 +176,22 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         btnSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String message = current_user_name+" : "+editMsg.getText().toString();
+                보내는message = current_user_name+" : "+editMsg.getText().toString();
                 // 비었는지 확인
                 if (!editMsg.getText().toString().equals("") && editMsg.getText().toString() != null) {
                     // 모든 Peer 에게 전송
                     for(DataChannel dataChannel1 : dataChannels){
                         // utf-8 포맷 및 buffer 생성
-                        ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
+                        // buffer 보내고 나면 초기화 됨 -> for 문 내부
+                        ByteBuffer buffer = ByteBuffer.wrap(보내는message.getBytes(StandardCharsets.UTF_8));
                         DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
 
-                        // buffer 보내고 나면 초기화 됨
                         // for 문 돌때마다 계속 생성해줘야 함
                         dataChannel1.send(dataBuffer);
                     }
                     // clear
                     editMsg.getText().clear();
-                    textView.append(message + "\n");
+                    textView.append(보내는message + "\n");
                     // 가장 아래로 내리기
                     scrollview.post(new Runnable() {
                         @Override
@@ -211,8 +215,8 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             @Override
             public void handleOnBackPressed() {
                 AlertDialog.Builder builder = new AlertDialog.Builder(Activity_live_streaming_broadcaster.this);
-                builder.setTitle("종료"); //AlertDialog의 제목 부분
-                builder.setMessage("정말로 종료 하시겠습니까?"); //AlertDialog의 내용 부분
+                builder.setTitle("방송종료"); //AlertDialog의 제목 부분
+                builder.setMessage("정말로 방송을 종료 하시겠습니까?"); //AlertDialog의 내용 부분
                 builder.setPositiveButton("예", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         // Socket.io
@@ -282,7 +286,6 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         // PeerConnectionFactory 설정 (video track..)
         initializePeerConnection();
         initialize_camera();
-//        initializeCamera();
         // socket.io 연결
         try {
             socket = IO.socket(SERVER_URL);
@@ -344,6 +347,18 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                 peerConnection.close();
             }
             peerConnections.clear();
+        });
+        /** finish **/
+        socket.on("finish", args -> {
+            // watcher id
+            String id = (String) args[0];
+            // 모든 peerconnection 종료 및 제거
+            for(DataChannel dataChannel : dataChannels){
+                if(dataChannel.label().equals(id)){
+                    dataChannels.remove(dataChannel);
+                    break;
+                }
+            }
         });
     }
     private void initializePeerConnection() {
@@ -490,11 +505,82 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             }
         });
 
+        DataChannel.Init dcInit = new DataChannel.Init();
+        dcInit.ordered = true;  // 순서대로 전송
+//        dcInit.negotiated = true; // 데이터 채널이 협상된 채널인지 설정
+        dcInit.maxRetransmits = -1; // 최대 재전송 횟수 (-1 : 무제한)
+
         // DataChannel 초기화
-        DataChannel dataChannel = peerConnection.createDataChannel("chat"+id, new DataChannel.Init());
-        dataChannel.registerObserver(dataChannelObserver);
+        DataChannel dataChannel = peerConnection.createDataChannel(id, dcInit);
+        dataChannel.registerObserver(new datachannelobserver(){
+            @Override
+            public void onMessage(DataChannel.Buffer buffer) {
+                super.onMessage(buffer);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // 받은 buffer data ( binary )
+                        ByteBuffer data = buffer.data;
+                        // ByteBuffer 에 남은 데이터
+                        byte[] messageBytes = new byte[data.remaining()];
+                        // messageBytes 에 데이터 복사
+                        data.get(messageBytes);
+
+                        // 각 Peer 로 부터 받은 메세지 ( UTF-8 포맷 )
+                        String 받은message = new String(messageBytes, StandardCharsets.UTF_8);
+
+                        // 정규식
+                        // ^:시작, \s:공백, \n:개행, $:끝 14, \p{Punct}: 14개의 punctuation marks
+                        // 한글 : ㄱ-ㅎ, ㅏ-ㅣ, 가-힣
+                        String validCharsetPattern = "^[a-zA-Z0-9\\u3131-\\u314e|\\u314f-\\u3163|\\uac00-\\ud7a3\\p{Punct}\\s\\n]+$";
+                        Pattern pattern = Pattern.compile(validCharsetPattern);
+                        Matcher matcher = pattern.matcher(받은message);
+
+                        if (!matcher.matches()) {
+                            // 재전송 요청
+                            보내는message = "AGAIN";
+                            byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
+                            ByteBuffer buffer = ByteBuffer.wrap(msg);
+                            DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                            dataChannel.send(dataBuffer);
+                        }else if(받은message.equals("AGAIN")) {
+                            // 재전송
+                            byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
+                            ByteBuffer buffer = ByteBuffer.wrap(msg);
+                            DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                            dataChannel.send(dataBuffer);
+                        }else{
+                            //각 watcher 에게 받은 message 다시 전송
+                            보내는message = 받은message;
+                            //Broadcaster : 모든 watcher 의 datachannel 을 관리
+                            for(DataChannel dataChannel1 : dataChannels){
+                                // buffer 보내고 나면 초기화 됨
+                                // for 문 돌때마다 계속 생성해줘야 함
+                                byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
+                                ByteBuffer buffer = ByteBuffer.wrap(msg);
+                                DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                                dataChannel1.send(dataBuffer);
+                            }
+                            // Broadcaster 부분에도 추가
+                            textView.append(받은message + "\n");
+                            // 가장 아래로 내리기
+                            scrollview.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    scrollview.fullScroll(ScrollView.FOCUS_DOWN);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
         // Arraylist 에 추가
         dataChannels.add(dataChannel);
+
 
         // Stream 추가
         peerConnection.addStream(mediaStream);
@@ -551,48 +637,17 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         @Override
         public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {}
     }
-    DataChannel.Observer dataChannelObserver = new DataChannel.Observer() {
+    private static class datachannelobserver implements DataChannel.Observer {
         @Override
-        public void onBufferedAmountChange(long l) {System.out.println("onBufferedAmountChange_datachannel");}
+        public void onBufferedAmountChange(long l) {
+//            System.out.println("onBufferedAmountChange_datachannel");
+        }
         @Override
         public void onStateChange() {
-            System.out.println("onStateChange_datachannel");
+//            System.out.println("onStateChange_datachannel");
         }
         @Override
         public void onMessage(DataChannel.Buffer buffer) {
-            System.out.println("onMessage_datachannel");
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    // 받은 buffer data ( binary )
-                    ByteBuffer data = buffer.data;
-                    byte[] messageBytes = new byte[data.remaining()];
-                    data.get(messageBytes);
-
-                    // 각 Peer 로 부터 받은 메세지 ( UTF-8 포맷 )
-                    String message = new String(messageBytes, StandardCharsets.UTF_8);
-                    // 각 Peer 에게 다시 전송
-                    for(DataChannel dataChannel1 : dataChannels){
-                        // utf-8 포맷 및 buffer 생성
-                        ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
-                        DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
-
-                        // buffer 보내고 나면 초기화 됨
-                        // for 문 돌때마다 계속 생성해줘야 함
-                        dataChannel1.send(dataBuffer);
-                    }
-                    // Broadcaster 부분에도 추가
-                    textView.append(message + "\n");
-                    // 가장 아래로 내리기
-                    scrollview.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            scrollview.fullScroll(ScrollView.FOCUS_DOWN);
-                        }
-                    });
-                }
-            });
         }
     };
     /******************************************************************/

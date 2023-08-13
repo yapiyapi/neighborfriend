@@ -121,16 +121,7 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                     if (imgList.isEmpty() && editContents.getText().toString().equals("")) {// 이미지, 내용 둘 중하나는 입력
                         Toast.makeText(Activity_band_post_create_update.this, "이미지를 추가하거나 내용을 작성해주세요.", Toast.LENGTH_SHORT).show();
                     } else {
-                        Log.i("ㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁ", String.valueOf(밴드번호));
-                        Log.i("ㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁ", String.valueOf(seq));
-                        Log.i("ㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁ",String.valueOf(imgList));
-                        Log.i("ㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁ",String.valueOf(imgList_path));
-                        Log.i("ㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁㅁ",editContents.getText().toString());
-
-
                         // Storage 에 추가된 데이터 업로드
-
-
 //                        Retrofit(밴드번호, seq, imgList,new_img_list, editContents.getText().toString());
                         if(requestQueue == null) requestQueue = Volley.newRequestQueue(getApplicationContext());
                         Volley게시물수정(밴드번호, seq, imgList,new_img_list, editContents.getText().toString());
@@ -144,17 +135,10 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                     if (imgList_path.isEmpty() && editContents.getText().toString().equals("")) {// 이미지, 내용 둘 중하나는 입력
                         Toast.makeText(Activity_band_post_create_update.this, "이미지를 추가하거나 내용을 작성해주세요.", Toast.LENGTH_SHORT).show();
                     } else {
-//                        Log.i("a", current_login_id);
-//                        Log.i("a", String.valueOf(밴드번호));
-//                        Log.i("a", String.valueOf(imgList));
-//                        Log.i("a", editContents.getText().toString());
-                        Log.i("imgList", String.valueOf(imgList));
-                        Log.i("imgList", String.valueOf(imgList_path));
                         if (requestQueue == null) {
                             requestQueue = Volley.newRequestQueue(getApplicationContext());
                         }
                         Volley(current_login_id, 밴드번호, imgList, imgList_path, editContents.getText().toString());
-
                     }
                 }
             });
@@ -294,37 +278,40 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                     @Override
                     public void onResponse(String response) {
 
-                        ArrayList 업데이트 = new ArrayList<>();
-                        for(int i=0 ; i<imgList_path.size(); i++){
-                            String cloud경로 = imgList_path.get(i).toString();
-                            Log.i("abssc",cloud경로);
-                            String cloud경로_new =
-                                    cloud경로.split("/")[0] + "/"
-                                    + cloud경로.split("/")[1] + "/"
-                                    + cloud경로.split("/")[2] + "/"
-                                    + response.trim() + "/"
-                                    + cloud경로.split("/")[4];
+                        if (image_uri.size()==0){ // text 만 게시할 때
+                            finish();
+                        }else{
+                            ArrayList 업데이트 = new ArrayList<>();
+                            for(int i=0 ; i<imgList_path.size(); i++){
+                                String cloud경로 = imgList_path.get(i).toString();
+                                Log.i("abssc",cloud경로);
+                                String cloud경로_new =
+                                        cloud경로.split("/")[0] + "/"
+                                                + cloud경로.split("/")[1] + "/"
+                                                + cloud경로.split("/")[2] + "/"
+                                                + response.trim() + "/"
+                                                + cloud경로.split("/")[4];
 
-                            Log.i("abssc",cloud경로_new);
-                            String 휴대폰경로 = image_uri.get(i).toString();
+                                Log.i("abssc",cloud경로_new);
+                                String 휴대폰경로 = image_uri.get(i).toString();
 
-                            업데이트.add(cloud경로_new);
+                                업데이트.add(cloud경로_new);
 
-                            StorageReference imagesRef = FirebaseCloudStorage.Storage_img(cloud경로_new);
-                            UploadTask uploadTask = imagesRef.putFile(Uri.parse(휴대폰경로));
-                            uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
-                                @Override
-                                public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                                    if (task.isSuccessful()) {
-                                        Volley(String.valueOf(band_seq) ,response,String.valueOf(업데이트) );
-                                        finish();
-                                    } else {
-                                        Log.e(TAG, "Image upload failed: " + task.getException().getMessage());
+                                StorageReference imagesRef = FirebaseCloudStorage.Storage_img(cloud경로_new);
+                                UploadTask uploadTask = imagesRef.putFile(Uri.parse(휴대폰경로));
+                                uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
+                                    @Override
+                                    public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
+                                        if (task.isSuccessful()) {
+                                            Volley(String.valueOf(band_seq) ,response,String.valueOf(업데이트) );
+                                            finish();
+                                        } else {
+                                            Log.e(TAG, "Image upload failed: " + task.getException().getMessage());
+                                        }
                                     }
-                                }
-                            });
+                                });
+                            }
                         }
-
                     }
                 },
                 new com.android.volley.Response.ErrorListener() {
@@ -461,93 +448,5 @@ public class Activity_band_post_create_update extends AppCompatActivity {
         request.setShouldCache(false);
         requestQueue.add(request);
     }
-
-
-
-
-    // 게시물 수정 로직
-    private void Retrofit(final int band_seq_get, int seq_get, ArrayList<String> imgList,ArrayList new_img_list, String 게시글) {
-        // db 에 path 데이터만 저장하기 위해 imgList 포맷
-        // imgList = [bands/1/posts/1/1, bands/1/posts/1/2, content://aa]
-        //    아래처럼 만들어야한다.
-        // imgList = [bands/1/posts/1/1, bands/1/posts/1/2, bands/1/posts/1/3]
-
-        ArrayList new_Array = new ArrayList();
-        for (int i = 0; i < imgList.size(); i++) {
-            if(imgList.get(i).contains("bands/")){
-                new_Array.add(imgList.get(i));
-            }
-        }
-        Log.i("Assdf", String.valueOf(imgList));
-        Log.i("Assdf", String.valueOf(new_Array));
-
-        int 마지막seq;
-        if(new_Array.size()==0){
-            마지막seq = -1;
-        }else{
-            마지막seq = Integer.parseInt(new_Array.get(new_Array.size() - 1).toString().split("/")[4]);
-
-        }
-        Log.i("Asdf", String.valueOf(마지막seq));
-        Log.i("Asdf", String.valueOf(마지막seq-1));
-
-        Log.i("Asdf", String.valueOf(new_img_list.size()!=0));
-
-
-        if(new_img_list.size()!=0){
-//                        ArrayList 업데이트 = new ArrayList<>();
-            for(int i=0 ; i< new_img_list.size(); i++){
-
-                String cloud경로 = String.format("bands/%s/posts/%s/%s",
-                        String.valueOf(band_seq_get),
-                        String.valueOf(seq_get),
-                        String.valueOf(마지막seq+i+1) );
-                String 휴대폰경로 = new_img_list.get(i).toString();
-
-                Log.i("ASdf",cloud경로);
-                Log.i("ASdf",휴대폰경로);
-                StorageReference imagesRef = FirebaseCloudStorage.Storage_img(cloud경로);
-                UploadTask uploadTask = imagesRef.putFile(Uri.parse(휴대폰경로));
-
-                uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                        if (task.isSuccessful()) {
-                            // db 에 저장할 리스트 [ new_Array ]
-                            new_Array.add(cloud경로);
-                        } else {
-                            Log.e(TAG, "Image upload failed: " + task.getException().getMessage());
-                        }
-                    }
-                });
-
-
-            }
-        }
-
-        retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
-        Call<String> call = retrofitAPI.updateBandPost(band_seq_get, seq_get, String.valueOf(new_Array), 게시글);
-
-        call.enqueue(new Callback<String>() {
-            @Override
-            public void onResponse(@NotNull Call<String> call, @NotNull Response<String> response) {
-                // 서버에서 응답을 받아옴
-                if (response.isSuccessful() && response.body() != null) {
-
-                    finish();
-                } else {
-                    Toast.makeText(Activity_band_post_create_update.this, "수정 실패", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            // 통신실패시
-            @Override
-            public void onFailure(@NonNull Call<String> call, @NonNull Throwable t) {
-                Toast.makeText(Activity_band_post_create_update.this, t.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                Log.i("Activity_band_post_create_update_err", t.getLocalizedMessage());
-            }
-        });
-    }
-
 
 }

@@ -40,8 +40,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class Service_chatting extends Service {
-    private static final String SERVER_HOST = "192.168.1.4";
-//    private static final String SERVER_HOST = "192.168.0.3";
+    private static final String SERVER_HOST = "43.200.4.212";
     private static final int SERVER_PORT = 8888;
     /**
      * 알림
@@ -200,7 +199,7 @@ public class Service_chatting extends Service {
                             if (msg_type == 0 || msg_type == 1 || msg_type == 2) {
                                 // 채팅방에없는멤버에게만 전송
                                 if (채팅방에없는멤버리스트.contains(current_user_id)) {
-                                    Retrofit채팅방정보가져오기(Integer.valueOf(chatRoom_seq), current_user_id, txt_contents);
+                                    Retrofit채팅방정보가져오기(Integer.valueOf(chatRoom_seq), current_user_id, txt_contents, msg_type);
                                 }
                             }
                         }
@@ -231,7 +230,7 @@ public class Service_chatting extends Service {
     /**
      * Http 통신
      **/
-    private void Retrofit채팅방정보가져오기(int chatRoom_seq_get, String user_id, String msg) {
+    private void Retrofit채팅방정보가져오기(int chatRoom_seq_get, String user_id, String msg, int msg_type) {
         /***********************  채팅방 정보 가져오기  ***************************/
         retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
         Call<chattingRoom> call1 = retrofitAPI.getChatRoom(chatRoom_seq_get,user_id);
@@ -242,7 +241,7 @@ public class Service_chatting extends Service {
                 if (response.isSuccessful() && response.body() != null) {
                     chattingRoom chattingRoom = response.body();
 
-                    메세지알림(chattingRoom, msg);
+                    메세지알림(chattingRoom, msg, msg_type);
                 } else {
                     System.out.println("Service 실패");
                 }
@@ -259,7 +258,7 @@ public class Service_chatting extends Service {
     /**
      * 알림
      **/
-    private void 메세지알림(chattingRoom chattingRoom, String message) {
+    private void 메세지알림(chattingRoom chattingRoom, String message, int msg_type) {
         mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         // 기기(device)의 SDK 버전 확인 ( SDK 26 버전 이상인지 - VERSION_CODES.O = 26)
         if (android.os.Build.VERSION.SDK_INT
@@ -293,6 +292,9 @@ public class Service_chatting extends Service {
         System.out.println(chattingRoom.getIsMine());
 
         PendingIntent notificationPendingIntent = PendingIntent.getActivity(this, NOTIFICATION_ID, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+
+        if(msg_type==1) message = "사진을 보냈습니다.";
+        else if(msg_type==2) message = "동영상을 보냈습니다.";
 
         NotificationCompat.Builder notifyBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(chattingRoom.getTitle())

@@ -44,6 +44,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -63,6 +68,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
     private static final String EVENT_CONNECT = "connect";
     private static final String EVENT_BROADCASTER = "broadcaster";
     private static final String EVENT_WATCHER = "watcher";
+    private static final String EVENT_FINISH = "finish";
     private static final String EVENT_disconnect = "disconnectPeer";
 
     private Socket socket;
@@ -73,6 +79,8 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
     private PeerConnection peerConnection;
     private EglBase eglBase;
     private MediaStream stream;
+    private DataChannel.Buffer dataBuffer;
+
 
     // view
     private ScrollView scrollview;private TextView textView;private SurfaceViewRenderer renderer;
@@ -81,7 +89,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
     private String current_user_id, current_user_name;
     private int 밴드번호; private String 방송방_id; private String user_id;
 
-    private boolean isRendererInitialized = false;
+    private boolean isRendererInitialized = false; private String 받는message, 보내는message;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,11 +99,6 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
         initializeView();
         initializeProperty();
-
-        btnX.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {finish();}
-        });
     }
 
     /**
@@ -130,6 +133,10 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
 
         /** webrtc **/
+        DataChannel.Init dcInit = new DataChannel.Init();
+        dcInit.ordered = true;  // 순서대로 전송
+        dcInit.maxRetransmits = -1;  //
+
         try {
             socket = IO.socket(SERVER_URL); // 소켓 생성 및 연결
             socket.connect();
@@ -200,6 +207,14 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
         socket.emit(EVENT_WATCHER, 방송방_id);
 
+        btnX.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // watcher 종료한다고 알림
+                socket.emit(EVENT_FINISH, 방송방_id);
+                finish();
+            }
+        });
 
     }
 
@@ -231,7 +246,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, new YourRtcObserver() {
             @Override
             public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-                System.out.println(iceConnectionState);
+//                System.out.println(iceConnectionState);
             }
 
             @Override
@@ -243,7 +258,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
             @Override
             public void onAddStream(MediaStream mediaStream) {
                 super.onAddStream(mediaStream);
-                System.out.println("onAddStream");
+//                System.out.println("onAddStream");
             }
 
             @Override
@@ -282,22 +297,90 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
             @Override
             public void onDataChannel(DataChannel dataChannel) {
                 super.onDataChannel(dataChannel);
-                dataChannel.registerObserver(dataChannelObserver);
 
+                /** 메세지 수신 **/
+                dataChannel.registerObserver(new dataChannelObserver(){
+                    @Override
+                    public void onMessage(DataChannel.Buffer buffer) {
+                        super.onMessage(buffer);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                // 받은 buffer data ( binary )
+                                ByteBuffer data = buffer.data;
+                                // ByteBuffer 에 남은 데이터 크기로 byte array 생성
+                                byte[] messageBytes = new byte[data.remaining()];
+                                // messageBytes 에 데이터 복사
+                                data.get(messageBytes);
+                                받는message = new String(messageBytes, StandardCharsets.UTF_8);
+
+
+                                // 정규식
+                                // ^:시작, \s:공백, \n:개행, $:끝 14, \p{Punct}: 14개의 punctuation marks
+                                // 한글 : ㄱ-ㅎ, ㅏ-ㅣ, 가-힣
+                                String validCharsetPattern = "^[a-zA-Z0-9\\u3131-\\u314e|\\u314f-\\u3163|\\uac00-\\ud7a3\\p{Punct}\\s\\n]+$";
+                                Pattern pattern = Pattern.compile(validCharsetPattern);
+                                Matcher matcher = pattern.matcher(받는message);
+
+                                if (!matcher.matches()) {
+                                    // 재전송 요청
+                                    보내는message = "AGAIN";
+                                    byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
+                                    ByteBuffer buffer = ByteBuffer.wrap(msg);
+                                    DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                                    dataChannel.send(dataBuffer);
+                                }else if(받는message.equals("AGAIN")) {
+                                    // 재전송
+                                    byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
+                                    ByteBuffer buffer = ByteBuffer.wrap(msg);
+                                    DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                                    dataChannel.send(dataBuffer);
+                                }else if(받는message.equals("STREAMING_FINISH")) {
+                                    // 방송 종료!!
+                                    Toast.makeText(Activity_live_streaming_watcher.this, "방송이 종료되었습니다.", Toast.LENGTH_SHORT).show();
+                                    finish();
+                                }else{
+
+                                    System.out.println("받는message : "+ 받는message);
+                                    // 나머지 message 는 채팅
+                                    textView.append(받는message + "\n");
+                                    // 가장 아래로 내리기
+                                    scrollview.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            scrollview.fullScroll(ScrollView.FOCUS_DOWN);
+                                        }
+                                    });
+                                }
+
+                            }
+                        });
+                    }
+                });
+
+                /** 메세지 송신 **/
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         btnSend.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                String message = current_user_name+" : "+editMsg.getText().toString();
+                                // 전송할 채팅 메세지
+                                보내는message = current_user_name+" : "+editMsg.getText().toString();
                                 if (!editMsg.getText().toString().equals("") && editMsg.getText().toString() != null) {
-                                    ByteBuffer buffer = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
-                                    DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+                                    // byte 로 변환
+                                    byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
+                                    // msg 크기 만큼의 buffer 생성
+                                    ByteBuffer buffer = ByteBuffer.wrap(msg);
+                                    // DataChannel.buffer 생성 (false : text 형식)
+                                    dataBuffer = new DataChannel.Buffer(buffer, false);
+
                                     // DataChannel.buffer 전송
-                                    dataChannel.send(dataBuffer);
+                                    boolean success = dataChannel.send(dataBuffer);
                                     // clear
-                                    editMsg.getText().clear();
+                                    if(success) editMsg.getText().clear();
                                 }
                             }
                         });
@@ -381,49 +464,13 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
         }
     }
 
-    DataChannel.Observer dataChannelObserver = new DataChannel.Observer() {
+    private static class dataChannelObserver implements DataChannel.Observer{
         @Override
-        public void onBufferedAmountChange(long l) {
-            System.out.println("onBufferedAmountChange_datachannel");
-        }
-
+        public void onBufferedAmountChange(long l) {        }
         @Override
-        public void onStateChange() {
-            System.out.println("onStateChange_datachannel");
-        }
-
+        public void onStateChange() {        }
         @Override
-        public void onMessage(DataChannel.Buffer buffer) {
-            // 상대방에게 메세지가 왔을 때
-            System.out.println("onMessage_datachannel");
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    ByteBuffer data = buffer.data;
-                    byte[] messageBytes = new byte[data.remaining()];
-                    data.get(messageBytes);
-                    String message = new String(messageBytes, StandardCharsets.UTF_8);
-                    // 방송 종료!!
-                    if(message.equals("STREAMING_FINISH")){
-                        Toast.makeText(Activity_live_streaming_watcher.this, "방송이 종료되었습니다.", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }else{
-                        // 나머지 message 는 채팅
-                        textView.append(message + "\n");
-                        // 가장 아래로 내리기
-                        scrollview.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                scrollview.fullScroll(ScrollView.FOCUS_DOWN);
-                            }
-                        });
-                    }
-
-                }
-            });
-
-        }
+        public void onMessage(DataChannel.Buffer buffer) {       }
     };
 
     /**
@@ -441,14 +488,14 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
         socket.close();
 
         // Close the PeerConnection
-//        if (peerConnection != null) {
-//            peerConnection.close();
-//        }
+        if (peerConnection != null) {
+            peerConnection.close();
+        }
+        if (eglBase != null) {
+            eglBase.release();
+        }
 //        if (peerConnectionFactory != null) {
 //            peerConnectionFactory.dispose();
-//        }
-//        if (eglBase != null) {
-//            eglBase.release();
 //        }
     }
 }

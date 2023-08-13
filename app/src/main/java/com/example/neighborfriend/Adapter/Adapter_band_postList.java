@@ -181,11 +181,11 @@ public class Adapter_band_postList extends RecyclerView.Adapter<RecyclerView.Vie
             지난시간 = post_list.get(position).getUpdated_at();
             // 닉네임
             ((LiveStreamViewHolder) holder).nickname.setText(닉네임);
-//            try { // 지난시간
-//                ((LiveStreamViewHolder) holder).pasttime.setText(시간포멧to몇분전(지난시간));
-//            } catch (ParseException e) {
-//                throw new RuntimeException(e);
-//            }
+            try { // 지난시간
+                ((LiveStreamViewHolder) holder).pasttime.setText(시간포멧to몇분전(지난시간));
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
             // 방송자 썸네일
             썸네일 = post_list.get(position).getThumnail_url();
 
