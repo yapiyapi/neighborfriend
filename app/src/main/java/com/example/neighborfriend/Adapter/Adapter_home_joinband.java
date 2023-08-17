@@ -57,7 +57,6 @@ public class Adapter_home_joinband extends RecyclerView.Adapter<Adapter_home_joi
 
          // 이미지
         String 경로 = String.format("bands/%s/thumnail", seq);
-//        Log.i("ASdfa",경로);
         // storage 읽기
         StorageReference imagesRef = FirebaseCloudStorage.Storage_img(경로);
         imagesRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {

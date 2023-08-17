@@ -181,24 +181,15 @@ public class Activity_band_post_create_update extends AppCompatActivity {
         imgList_path = new ArrayList<>();
         new_img_list = new ArrayList<>();
 
-//        Log.i("aaaaa", String.valueOf(밴드번호));
-//        Log.i("aaaaa", String.valueOf(seq));
-//        Log.i("aaaaa",image_list);
-//        Log.i("aaaaa",게시물);
         /** post 수정 시 초기화 **/
         if (seq != 0) {// 수정
-            Log.i("aaaaa", String.valueOf(imgList));
-            Log.i("aaaaa", String.valueOf(imgList_path));
-            Log.i("aaaaa", image_list);
             for (String i : Arrays.asList(image_list.replace("[", "").replace("]", "").split(","))) {
                 imgList.add(i.trim());
             }
             editContents.setText(게시물);
 
             // list 가 분명히 비었는데도 size() 가 1 / 내용은 없음..
-            Log.i("asdf", String.valueOf(imgList.get(0).equals("")));
             if(imgList.get(0).equals("")) imgList.clear();
-            Log.i("asdf", String.valueOf(imgList.size()));
             /** 어댑터 연결 **/
             레이아웃매니저 = new LinearLayoutManager(Activity_band_post_create_update.this, LinearLayoutManager.HORIZONTAL, false);
             어댑터 = new Adapter_band_post_create_img(imgList,String.valueOf(밴드번호),String.valueOf(seq) );
@@ -228,8 +219,6 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                         if (clipData.getItemCount() > 10) {   // 선택한 이미지가 11장 이상인 경우
                             Toast.makeText(getApplicationContext(), "10장까지 선택 가능합니다.", Toast.LENGTH_LONG).show();
                         } else {   // 선택한 이미지가 1장 이상 10장 이하인 경우
-                            Log.i("Aaaaa", String.valueOf(clipData.getItemCount()));
-                            Log.i("bbbbb", String.valueOf(imgList.size()));
                             if (clipData.getItemCount() + imgList.size() > 10) { // 선택한 이미지 개수 + list 내의 개수 > 10
                                 Toast.makeText(Activity_band_post_create_update.this, "10장까지 선택 가능합니다.", Toast.LENGTH_SHORT).show();
                             } else {
@@ -248,7 +237,6 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                                     }
                                 }
 
-                                Log.i("ASdf", String.valueOf(imgList));
 
                                 /** 어댑터 연결 **/
                                 레이아웃매니저 = new LinearLayoutManager(Activity_band_post_create_update.this, LinearLayoutManager.HORIZONTAL, false);
@@ -256,10 +244,7 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                                 recyclerImg.setLayoutManager(레이아웃매니저);
                                 recyclerImg.setAdapter(어댑터);
 
-
-                                Log.i("inten", String.valueOf(imgList));
                             }
-                            Log.i("항요", String.valueOf(imgList_path));
 
 
                         }
@@ -284,7 +269,6 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                             ArrayList 업데이트 = new ArrayList<>();
                             for(int i=0 ; i<imgList_path.size(); i++){
                                 String cloud경로 = imgList_path.get(i).toString();
-                                Log.i("abssc",cloud경로);
                                 String cloud경로_new =
                                         cloud경로.split("/")[0] + "/"
                                                 + cloud경로.split("/")[1] + "/"
@@ -292,7 +276,6 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                                                 + response.trim() + "/"
                                                 + cloud경로.split("/")[4];
 
-                                Log.i("abssc",cloud경로_new);
                                 String 휴대폰경로 = image_uri.get(i).toString();
 
                                 업데이트.add(cloud경로_new);
@@ -395,8 +378,6 @@ public class Activity_band_post_create_update extends AppCompatActivity {
                         String.valueOf(마지막seq+i+1) );
                 String 휴대폰경로 = new_img_list.get(i).toString();
 
-                Log.i("ASdf",cloud경로);
-                Log.i("ASdf",휴대폰경로);
                 StorageReference imagesRef = FirebaseCloudStorage.Storage_img(cloud경로);
                 UploadTask uploadTask = imagesRef.putFile(Uri.parse(휴대폰경로));
 

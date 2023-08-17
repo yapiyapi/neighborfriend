@@ -514,7 +514,6 @@ public class Activity_band_chatting_room extends AppCompatActivity {
                     for (int i = 0; i < 삭제_uri.size(); i++) {
 
                         String 채팅방uri경로 = 삭제_uri.get(i).replace("\"", "");
-                        Log.i("채팅방uri경로", 채팅방uri경로);
                         StorageReference imagesRef = FirebaseCloudStorage.Storage_img(채팅방uri경로);
                         imagesRef.delete();
                     }

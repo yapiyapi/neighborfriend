@@ -152,11 +152,6 @@ public class Activity_Collect_User extends AppCompatActivity {
         if(intent.getStringExtra("ageRange")!=null) ageRange = intent.getStringExtra("ageRange");
         if(intent.getStringExtra("gender")!=null) gender = intent.getStringExtra("gender");
 
-        Log.i("",user_id);
-        Log.i("",nickname);
-        Log.i("",thumnail_url);
-        Log.i("",ageRange);
-        Log.i("",gender);
     }
 
     // 휴대폰 번호 인증
@@ -244,7 +239,6 @@ public class Activity_Collect_User extends AppCompatActivity {
                 new com.android.volley.Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-//                        Log.i("a",response);
                         if(response.equals("1")) {
                             // 홈으로
                             Intent intent = new Intent(Activity_Collect_User.this, MainActivity.class);

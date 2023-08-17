@@ -98,14 +98,6 @@ public class Activity_band_post extends AppCompatActivity {
 
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.i("Afasdasdf", String.valueOf(밴드번호));
-        Log.i("Afasdasdf", String.valueOf(seq));
-//        if (밴드번호 != 0 && seq != 0) Retrofit(밴드번호, seq);
-    }
-
     /**
      * initialize
      **/
@@ -134,8 +126,6 @@ public class Activity_band_post extends AppCompatActivity {
         밴드번호 = intent.getIntExtra("밴드번호", 0);
         seq = intent.getIntExtra("seq", 0);
         /** 초기화 **/
-        Log.i("밴드번호 seq", String.valueOf(밴드번호));
-        Log.i("밴드번호 seq", String.valueOf(seq));
 
         if (밴드번호 != 0 && seq != 0) {
 
@@ -362,7 +352,6 @@ public class Activity_band_post extends AppCompatActivity {
             public void onResponse(@NotNull Call<Integer> call, @NotNull Response<Integer> response) {
                 // 서버에서 응답을 받아옴
                 if (response.isSuccessful() && response.body() != null) {
-                    Log.i("ASdf",response.body().toString());
                     if(response.body()==1)
                         Toast.makeText(Activity_band_post.this, "삭제 완료", Toast.LENGTH_SHORT).show();
                     else Toast.makeText(Activity_band_post.this, "삭제 실패", Toast.LENGTH_SHORT).show();

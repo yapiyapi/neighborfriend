@@ -130,7 +130,6 @@ public class Activity_myprofile extends AppCompatActivity {
         /**  변수 초기화 **/
         /**  layout 초기화 **/
         // 썸네일 초기화
-//        Log.i("asdfads", String.valueOf(이미지.equals(경로)));
         if(!이미지.equals(경로)) {
             Glide.with(Activity_myprofile.this).load(이미지).into(imgThum);
         }else{
@@ -242,7 +241,6 @@ public class Activity_myprofile extends AppCompatActivity {
                 new com.android.volley.Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-//                        Log.i("a",response);
                         if(response.equals("1")) {
                             // fragment_more 로 데이터 전송
                             Intent intent_profile = new Intent();

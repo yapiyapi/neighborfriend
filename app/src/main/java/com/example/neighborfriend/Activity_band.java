@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -86,7 +87,7 @@ public class Activity_band extends AppCompatActivity {
     private Socket socket;
     // view
     private ImageView imgband, btnChat, btnSet;
-    private RecyclerView recyBandPost;
+    private RecyclerView recyBandPost; private SwipeRefreshLayout swipeRefreshLayout;
     private TextView txtTitl, txtMemb, txtPubl, txtInvt;
     private Button btnwrt, btnStr;
     private String user_id, thumnail_url, 제목, 소개글, 멤버수;
@@ -164,6 +165,7 @@ public class Activity_band extends AppCompatActivity {
         btnChat = binding.btnChat;
         btnSet = binding.btnSetting;
         // recy
+        swipeRefreshLayout = binding.swipeRefreshLayout;
         recyBandPost = binding.recyBandPost;
     }
 
@@ -199,7 +201,6 @@ public class Activity_band extends AppCompatActivity {
                 .setAndroidParameters(new DynamicLink.AndroidParameters.Builder(getPackageName()).build())
                 .buildDynamicLink();
         Uri dylinkuri = dynamicLink.getUri();   //긴 URI
-        Log.d(TAG, "long uri : " + dylinkuri.toString());
         //짧은 URI사용
         FirebaseDynamicLinks.getInstance().createDynamicLink()
                 .setLongLink(dylinkuri)
@@ -211,7 +212,6 @@ public class Activity_band extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             Uri shortLink = task.getResult().getShortLink();
                             Uri flowchartLink = task.getResult().getPreviewLink();
-                            Log.d(TAG, "short uri : " + shortLink.toString());    //짧은 URI
 
                             /** 초대 링크 보내기 **/
                             // 짧은 동적 링크 코드 보내기 (메신저 앱)
@@ -280,7 +280,6 @@ public class Activity_band extends AppCompatActivity {
                     else txtPubl.setText("비공개");
 
 
-                    Log.i("a", thumnail_url);
 
                     // 설정으로
                     btnSet.setOnClickListener(new View.OnClickListener() {
@@ -356,6 +355,22 @@ public class Activity_band extends AppCompatActivity {
                     recyBandPost.setLayoutManager(레이아웃매니저);
                     recyBandPost.setAdapter(어댑터_band_post);
 
+                    // 리사이클러뷰 새로고침
+                    // 1. 기존 list 정보 / 2. 방송방 정보
+                    swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                        @Override
+                        public void onRefresh() {
+                            swipeRefreshLayout.setRefreshing(false);
+                            post_list.clear();
+
+                            // 밴드 정보 및 list 정보 가져오기
+                            // 방송방 가져오기
+                            Retrofit(밴드번호);
+                            // 새로고침
+                            어댑터_band_post.notifyDataSetChanged();
+                        }
+                    });
+
                     //리사이클러뷰 화면전환
                     어댑터_band_post.setOnItemClickListener(new Adapter_band_postList.OnItemClickListener() {
                         @Override
@@ -398,7 +413,6 @@ public class Activity_band extends AppCompatActivity {
                 new com.android.volley.Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-//                        Log.i("a",response);
                         if (response.equals("0")) { // 실패
                             Toast.makeText(getApplicationContext(), "멤버수 가져오기 실패", Toast.LENGTH_SHORT).show();
                         } else { // 멤버수 가져오기
@@ -432,7 +446,7 @@ public class Activity_band extends AppCompatActivity {
     }
 
     // 방송자 정보 가져오기
-    private void Retrofit_user(final String user_id, String 방송자_시작시간){
+    private void Retrofit_user(final String user_id, String 방송_시작시간){
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
         retrofitAPI = RetrofitClass.getApiClient().create(RetrofitAPI.class);
@@ -452,29 +466,23 @@ public class Activity_band extends AppCompatActivity {
                     bands_post_1.setUser_id(user_id);
                     bands_post_1.setNickname(user_nickname);
                     bands_post_1.setThumnail_url(user_thumnail_url);
-                    bands_post_1.setUpdated_at(방송자_시작시간);
+                    bands_post_1.setUpdated_at(방송_시작시간);
 //            bands_post_1.setImage_uri();
                     bands_post_1.setViewType(1);
-
-
-//                    post_list.add(0, bands_post_1);
 
 
                     try {
                         // 방송 시작 시간 순서
                         int insertIndex = -1;
-                        Date newStartTime = sdf.parse(방송자_시작시간);
+                        Date newStartTime = sdf.parse(방송_시작시간);
 
                         for (int i = 0; i < post_list.size(); i++) {
                             bands_post post = post_list.get(i);
                             Date postStartTime = sdf.parse(post.getUpdated_at());
 
-                            System.out.println(newStartTime);
-                            System.out.println(postStartTime);
                             // 방송 시작 시간 비교
                             if (newStartTime.compareTo(postStartTime) >= 0) {
                                 insertIndex = i;
-                                System.out.println("비교");
                                 break;
                             }
                         }
@@ -492,6 +500,23 @@ public class Activity_band extends AppCompatActivity {
                         어댑터_band_post = new Adapter_band_postList(post_list);
                         recyBandPost.setLayoutManager(레이아웃매니저);
                         recyBandPost.setAdapter(어댑터_band_post);
+
+
+                        // 리사이클러뷰 새로고침
+                        // 1. 기존 list 정보 / 2. 방송방 정보
+                        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                            @Override
+                            public void onRefresh() {
+                                swipeRefreshLayout.setRefreshing(false);
+                                post_list.clear();
+
+                                // 밴드 정보 및 list 정보 가져오기
+                                // 방송방 가져오기
+                                Retrofit(밴드번호);
+                                // 새로고침
+                                어댑터_band_post.notifyDataSetChanged();
+                            }
+                        });
 
                         //리사이클러뷰 화면전환
                         어댑터_band_post.setOnItemClickListener(new Adapter_band_postList.OnItemClickListener() {

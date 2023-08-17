@@ -217,7 +217,6 @@ public class Activity_band_chatting_room_create_update extends AppCompatActivity
 
                         // storage 저장
                         StorageReference imagesRef = FirebaseCloudStorage.Storage_img(경로);
-                        Log.i("마지막 ",썸네일);
                         UploadTask uploadTask = imagesRef.putFile(Uri.parse(썸네일));
                         uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
                             @Override
@@ -272,7 +271,6 @@ public class Activity_band_chatting_room_create_update extends AppCompatActivity
 
                             // storage 저장
                             StorageReference imagesRef = FirebaseCloudStorage.Storage_img(경로);
-//                            Log.i("마지막 ",썸네일);
                             UploadTask uploadTask = imagesRef.putFile(Uri.parse(썸네일));
                             uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
                                 @Override

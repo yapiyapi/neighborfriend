@@ -34,7 +34,8 @@ android {
 
 dependencies {
     // webrtc
-    implementation 'org.webrtc:google-webrtc:1.0.32006'
+//    implementation 'org.webrtc:google-webrtc:1.0.32006'
+    implementation "io.getstream:stream-webrtc-android:1.0.2"
     implementation 'io.socket:socket.io-client:2.0.0'
 
 
@@ -63,6 +64,9 @@ dependencies {
     //navigation (bottom)
     implementation 'androidx.navigation:navigation-fragment:2.5.3'
     implementation 'androidx.navigation:navigation-ui:2.5.3'
+
+    // recyclerview
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
 
     // onback
     implementation "androidx.activity:activity:1.6.0-alpha05"

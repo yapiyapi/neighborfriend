@@ -62,14 +62,13 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
      **/
     SharedPreferences userData;
 
-    private static final String EVENT_OFFER = "offer";
-    private static final String EVENT_ANSWER = "answer";
-    private static final String EVENT_CANDIDATE = "candidate";
-    private static final String EVENT_CONNECT = "connect";
-    private static final String EVENT_BROADCASTER = "broadcaster";
-    private static final String EVENT_WATCHER = "watcher";
-    private static final String EVENT_FINISH = "finish";
-    private static final String EVENT_disconnect = "disconnectPeer";
+    public static final String EVENT_OFFER = "offer";
+    public static final String EVENT_ANSWER = "answer";
+    public static final String EVENT_CANDIDATE = "candidate";
+    public static final String EVENT_BROADCASTER = "broadcaster";
+    public static final String EVENT_WATCHER = "watcher";
+    public static final String EVENT_FINISH = "finish";
+    public static final String EVENT_disconnect = "disconnectPeer";
 
     private Socket socket;
 
@@ -133,10 +132,6 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
 
 
         /** webrtc **/
-        DataChannel.Init dcInit = new DataChannel.Init();
-        dcInit.ordered = true;  // 순서대로 전송
-        dcInit.maxRetransmits = -1;  //
-
         try {
             socket = IO.socket(SERVER_URL); // 소켓 생성 및 연결
             socket.connect();
@@ -241,59 +236,43 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
     }
 
 
+    /** wather 에서 peerconnection 생성 **/
     private void createPeerConnection(String id) {
         PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
         peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, new YourRtcObserver() {
             @Override
-            public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-//                System.out.println(iceConnectionState);
-            }
-
-            @Override
             public void onIceCandidate(IceCandidate candidate) {
                 // icecandidate 수집시 서버에 전송
-                socket.emit("candidate", 방송방_id, id, candidate.sdpMid, candidate.sdpMLineIndex, candidate.sdp);
+                socket.emit(EVENT_CANDIDATE, 방송방_id, id, candidate.sdpMid, candidate.sdpMLineIndex, candidate.sdp);
             }
-
-            @Override
-            public void onAddStream(MediaStream mediaStream) {
-                super.onAddStream(mediaStream);
-//                System.out.println("onAddStream");
-            }
-
             @Override
             public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
                 super.onAddTrack(rtpReceiver, mediaStreams);
                 System.out.println("onAddTrack");
 
-                if (mediaStreams != null && mediaStreams.length > 0) {
-                    // Stream 에서 track 추출
-                    stream = mediaStreams[0];
-                    // videoTrack 추가 ( video, audio 모두 있을 때 )
-                    if (stream.videoTracks.size() == 1 && stream.audioTracks.size() == 1) {
-                        VideoTrack remoteVideoTrack_f = stream.videoTracks.get(0);
+                if(rtpReceiver.track().id().equals("100")){ // Video
+                    VideoTrack remoteVideoTrack_f = (VideoTrack) rtpReceiver.track();
 
-                        // 오디오 enable
-                        stream.audioTracks.get(0).setEnabled(true);
-                        // 비디오 출력
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                // 초기화
-                                if(!isRendererInitialized){
-                                    renderer.init(eglBase.getEglBaseContext(), null);
-                                    isRendererInitialized = true;
-                                }
-                                // 비디오 track 추가
-                                remoteVideoTrack_f.addSink(renderer);
-                                renderer.setMirror(true); // 화면 좌우 대칭
-
+                    // 비디오 출력
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // 초기화
+                            if(!isRendererInitialized){
+                                renderer.init(eglBase.getEglBaseContext(), null);
+                                isRendererInitialized = true;
                             }
-                        });
-                    }
+                            // 비디오 track 추가
+                            remoteVideoTrack_f.addSink(renderer);
+                            renderer.setMirror(true); // 화면 좌우 대칭
+
+                        }
+                    });
+                }else{ // Audio
+                    // 오디오 enable
+                    rtpReceiver.track().setEnabled(true);
                 }
             }
-
             @Override
             public void onDataChannel(DataChannel dataChannel) {
                 super.onDataChannel(dataChannel);
@@ -314,30 +293,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                                 data.get(messageBytes);
                                 받는message = new String(messageBytes, StandardCharsets.UTF_8);
 
-
-                                // 정규식
-                                // ^:시작, \s:공백, \n:개행, $:끝 14, \p{Punct}: 14개의 punctuation marks
-                                // 한글 : ㄱ-ㅎ, ㅏ-ㅣ, 가-힣
-                                String validCharsetPattern = "^[a-zA-Z0-9\\u3131-\\u314e|\\u314f-\\u3163|\\uac00-\\ud7a3\\p{Punct}\\s\\n]+$";
-                                Pattern pattern = Pattern.compile(validCharsetPattern);
-                                Matcher matcher = pattern.matcher(받는message);
-
-                                if (!matcher.matches()) {
-                                    // 재전송 요청
-                                    보내는message = "AGAIN";
-                                    byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
-                                    ByteBuffer buffer = ByteBuffer.wrap(msg);
-                                    DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
-
-                                    dataChannel.send(dataBuffer);
-                                }else if(받는message.equals("AGAIN")) {
-                                    // 재전송
-                                    byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
-                                    ByteBuffer buffer = ByteBuffer.wrap(msg);
-                                    DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
-
-                                    dataChannel.send(dataBuffer);
-                                }else if(받는message.equals("STREAMING_FINISH")) {
+                                if(받는message.equals("STREAMING_FINISH")) {
                                     // 방송 종료!!
                                     Toast.makeText(Activity_live_streaming_watcher.this, "방송이 종료되었습니다.", Toast.LENGTH_SHORT).show();
                                     finish();
@@ -354,7 +310,6 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                                         }
                                     });
                                 }
-
                             }
                         });
                     }

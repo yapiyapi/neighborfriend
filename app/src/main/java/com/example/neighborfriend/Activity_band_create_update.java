@@ -148,9 +148,6 @@ public class Activity_band_create_update extends AppCompatActivity {
                         if ( 이미지 != null ) {
                             // intent에 데이터 저장
 
-                            Log.i("ㅑㅑㅑ",editTitle.getText().toString());
-                            Log.i("ㅑㅑㅑ",이미지);
-                            Log.i("ㅑㅑㅑ",editContents.getText().toString());
                             Intent intent_setting = new Intent();
                             intent_setting.putExtra("제목", editTitle.getText().toString());
                             intent_setting.putExtra("이미지", 이미지);
@@ -247,7 +244,6 @@ public class Activity_band_create_update extends AppCompatActivity {
         /** layout 초기화 **/
         editTitle.setText(제목);
 
-        Log.i("ASdfa",경로);
         // storage 읽기
         StorageReference imagesRef = FirebaseCloudStorage.Storage_img(경로);
         imagesRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
@@ -339,9 +335,6 @@ public class Activity_band_create_update extends AppCompatActivity {
 
                 카테고리 = 카테고리(String.valueOf(arrayList1.get(i)));
 
-//                Toast.makeText(Activity_band_create_update.this, i, Toast.LENGTH_SHORT).show();
-                Log.i("A", String.valueOf(i));
-//                Toast.makeText(Activity_band_create_update.this, 카테고리, Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -394,7 +387,6 @@ public class Activity_band_create_update extends AppCompatActivity {
 
                             // storage 저장
                             StorageReference imagesRef = FirebaseCloudStorage.Storage_img(경로);
-                            Log.i("마지막 ",썸네일);
                             UploadTask uploadTask = imagesRef.putFile(Uri.parse(썸네일));
                             uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
                                 @Override
@@ -448,7 +440,6 @@ public class Activity_band_create_update extends AppCompatActivity {
             public void onResponse(@NotNull Call<String> call, @NotNull Response<String> response) {
                 // 서버에서 응답을 받아옴
                 if (response.isSuccessful() && response.body() != null) {
-                    Log.i("ASdf",response.body().toString());
                     if(response.body().equals("0")) {
                         Toast.makeText(getApplicationContext(), "밴드 추가 실패", Toast.LENGTH_SHORT).show();
                     }else {
@@ -456,7 +447,6 @@ public class Activity_band_create_update extends AppCompatActivity {
 
                         // storage 저장
                         StorageReference imagesRef = FirebaseCloudStorage.Storage_img(경로);
-                        Log.i("마지막 ",썸네일);
                         UploadTask uploadTask = imagesRef.putFile(Uri.parse(썸네일));
                         uploadTask.addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
                             @Override

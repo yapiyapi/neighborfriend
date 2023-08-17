@@ -137,7 +137,6 @@ public class Activity_band_setting extends AppCompatActivity {
         complete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.i("이미지", 이미지);
                 // 카테고리 추가
                 if (!카테고리.equals("-1")) {
                     if (이미지.contains("content")) {
@@ -293,15 +292,6 @@ public class Activity_band_setting extends AppCompatActivity {
                         이미지 = intent.getStringExtra("이미지");
                         내용 = intent.getStringExtra("내용");
 
-                        Log.i("b", String.valueOf(band_seq));
-                        Log.i("b", String.valueOf(제목));
-                        Log.i("b", String.valueOf(이미지));
-                        Log.i("b", String.valueOf(내용));
-                        Log.i("b", String.valueOf(카테고리));
-                        Log.i("b", String.valueOf(공개설정));
-                        Log.i("b", String.valueOf(성별제한));
-                        Log.i("b", String.valueOf(나이제한_from));
-                        Log.i("b", String.valueOf(나이제한_to));
                     }
                 }
             });
@@ -318,12 +308,6 @@ public class Activity_band_setting extends AppCompatActivity {
                         나이제한_to = intent.getStringExtra("나이제한_to");
                         성별제한 = intent.getStringExtra("성별제한");
 
-                        Log.i("b", String.valueOf(band_seq));
-                        Log.i("b", String.valueOf(카테고리));
-                        Log.i("b", String.valueOf(공개설정));
-                        Log.i("b", String.valueOf(성별제한));
-                        Log.i("b", String.valueOf(나이제한_from));
-                        Log.i("b", String.valueOf(나이제한_to));
                     }
                 }
             });
@@ -415,8 +399,6 @@ public class Activity_band_setting extends AppCompatActivity {
                             String[] postSeqList = response.replace("[", "").replace("]", "").split(",");
 
                             for (int i = 0; i < postSeqList.length; i++) {
-                                Log.i("Aaa", band_seq);
-                                Log.i("Aaa", postSeqList[i].replace("\"", ""));
 
                                 String 밴드게시물경로 = String.format("bands/%s/posts/%s", band_seq, postSeqList[i].replace("\"", ""));
                                 StorageReference imagesRef = FirebaseCloudStorage.Storage_img(밴드게시물경로);
@@ -491,22 +473,16 @@ public class Activity_band_setting extends AppCompatActivity {
                         String 밴드썸네일경로 = String.format("bands/%s/thumnail", seq);
                         StorageReference 밴드썸네일 = FirebaseCloudStorage.Storage_img(밴드썸네일경로);
                         밴드썸네일.delete();
-                        Log.i("asdfasdfasdfa", 밴드썸네일경로);
 
                         // posts/* 삭제
 //                        String[] postSeqList = response.body().replace("[", "").replace("]", "").split(",");
                         List<String> postSeqList = response.body();
 
-                        Log.i("asdfasdfasdfa", String.valueOf(response.body()));
-                        Log.i("asdfasdfasdfa", String.valueOf(postSeqList));
                         for (int i = 0; i < postSeqList.size(); i++) {
-                            Log.i("Aaa", seq);
-                            Log.i("Aaa", postSeqList.get(i).replace("\"", ""));
 
                             String 밴드게시물경로 = String.format("bands/%s/posts/%s", seq, postSeqList.get(i).replace("\"", ""));
                             StorageReference imagesRef = FirebaseCloudStorage.Storage_img(밴드게시물경로);
 
-                            Log.i("asdfasdfasdfa", 밴드게시물경로);
                             imagesRef.listAll()
                                     .addOnSuccessListener(new OnSuccessListener<ListResult>() {
                                         @Override
@@ -567,8 +543,6 @@ public class Activity_band_setting extends AppCompatActivity {
                         String[] postSeqList = response.replace("[", "").replace("]", "").split(",");
 
                         for (int i = 0; i < postSeqList.length; i++) {
-                            Log.i("Aaa", band_seq);
-                            Log.i("Aaa", postSeqList[i].replace("\"", ""));
 
                             String 밴드게시물경로 = String.format("bands/%s/posts/%s", band_seq, postSeqList[i].replace("\"", ""));
                             Log.i("밴드게시물경로", 밴드게시물경로);

@@ -136,7 +136,6 @@ public class Activity_band_introduce extends AppCompatActivity {
                         Log.d("TAG", "deepLink: " + deepLink);
 
                         String 초대uri = deepLink.toString();
-//                        Log.i("aaaaa",초대uri);
                         밴드번호 = Integer.parseInt(초대uri.substring(초대uri.lastIndexOf("=")+1));
 
                         /** Http 통신 **/
@@ -145,7 +144,6 @@ public class Activity_band_introduce extends AppCompatActivity {
                         // band 멤버수 가져오기
                         if(requestQueue == null) requestQueue = Volley.newRequestQueue(getApplicationContext());
                         Volley(밴드번호);
-//                        Log.i("aaaaa", String.valueOf(밴드번호));
                     }
                 })
                 .addOnFailureListener(this, new OnFailureListener() {
@@ -178,17 +176,6 @@ public class Activity_band_introduce extends AppCompatActivity {
                     나이제한_시작 = response.body().get나이제한_시작();
                     나이제한_끝 = response.body().get나이제한_끝();
 
-
-                    Log.i("b", String.valueOf(seq));
-                    Log.i("b",user_id);
-                    Log.i("bandband",thumnail_url);
-                    Log.i("b",제목);
-                    Log.i("b",소개글);
-                    Log.i("b", String.valueOf(카테고리));
-                    Log.i("b", String.valueOf(공개여부));
-                    Log.i("b", String.valueOf(성별제한));
-                    Log.i("b", String.valueOf(나이제한_시작));
-                    Log.i("b", String.valueOf(나이제한_끝));
 
                     /**  초기화 **/
                     // 이미지 초기화
@@ -256,7 +243,6 @@ public class Activity_band_introduce extends AppCompatActivity {
                 new com.android.volley.Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-//                        Log.i("a",response);
                         if(response.equals("0")) { // 실패
                             Toast.makeText(getApplicationContext(), "멤버수 가져오기 실패", Toast.LENGTH_SHORT).show();
                         }else { // 멤버수 가져오기
@@ -298,7 +284,6 @@ public class Activity_band_introduce extends AppCompatActivity {
                 new com.android.volley.Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-//                        Log.i("a",response);
                         if(response.equals("4")) { // 성공
                             Toast.makeText(getApplicationContext(), "가입 성공", Toast.LENGTH_SHORT).show();
                             // 밴드로 이동

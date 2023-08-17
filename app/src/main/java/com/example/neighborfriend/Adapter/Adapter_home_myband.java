@@ -61,9 +61,6 @@ public class Adapter_home_myband extends RecyclerView.Adapter<Adapter_home_myban
         // 이미지
         String 경로 = String.format("bands/%s/thumnail", seq);
 
-//        String cloud경로_new = 경로.split("/")[2].replace("thum","hi");
-//        Log.i("ASdfa",cloud경로_new);
-//        Log.i("ASdfa",경로);
         // storage 읽기
         StorageReference imagesRef = FirebaseCloudStorage.Storage_img(경로);
         imagesRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {

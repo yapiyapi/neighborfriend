@@ -1,5 +1,13 @@
 package com.example.neighborfriend;
 
+import static com.example.neighborfriend.Activity_live_streaming_watcher.EVENT_ANSWER;
+import static com.example.neighborfriend.Activity_live_streaming_watcher.EVENT_BROADCASTER;
+import static com.example.neighborfriend.Activity_live_streaming_watcher.EVENT_CANDIDATE;
+import static com.example.neighborfriend.Activity_live_streaming_watcher.EVENT_FINISH;
+import static com.example.neighborfriend.Activity_live_streaming_watcher.EVENT_OFFER;
+import static com.example.neighborfriend.Activity_live_streaming_watcher.EVENT_WATCHER;
+import static com.example.neighborfriend.Activity_live_streaming_watcher.EVENT_disconnect;
+
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -93,19 +101,27 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
 
     private MediaStream mediaStream;
     // 비디오
-    private VideoTrack localVideoTrack; private VideoCapturer videoCapturer; private VideoSource videoSource;
+    private VideoTrack localVideoTrack;
+    private VideoCapturer videoCapturer;
+    private VideoSource videoSource;
     // 오디오
-    private AudioSource audioSource; private AudioTrack localAudioTrack;
+    private AudioSource audioSource;
+    private AudioTrack localAudioTrack;
     private SurfaceTextureHelper surfaceTextureHelper;
 
     // view
-    private ScrollView scrollview; private TextView textView; private SurfaceViewRenderer renderer;
-    private EditText editMsg; private ImageView btnX, btnMic, btnSwitchCamera, btnSend;
+    private ScrollView scrollview;
+    private TextView textView;
+    private SurfaceViewRenderer renderer;
+    private EditText editMsg;
+    private ImageView btnX, btnMic, btnSwitchCamera, btnSend;
 
     private String current_user_id, current_user_name;
-    private boolean camera_front_back= false;
+    private boolean camera_front_back = false;
 
-    private int 밴드번호; private String 방송방_id; private String 보내는message;
+    private int 밴드번호;
+    private String 방송방_id;
+    private String 보내는message;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,7 +150,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                         releaseCamera();
                         finish();
                         // 다른 Peer 에게 '방송 종료' 알림
-                        for(DataChannel dataChannel1 : dataChannels){
+                        for (DataChannel dataChannel1 : dataChannels) {
                             보내는message = "STREAMING_FINISH";
                             // utf-8 포맷 및 buffer 생성
                             ByteBuffer buffer = ByteBuffer.wrap(보내는message.getBytes(StandardCharsets.UTF_8));
@@ -154,11 +170,11 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         btnMic.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(localAudioTrack.enabled()){
+                if (localAudioTrack.enabled()) {
                     // 오디오 track 설정 및 리소스 변경
                     localAudioTrack.setEnabled(false);
                     btnMic.setImageResource(R.drawable.mic_off);
-                }else{
+                } else {
                     localAudioTrack.setEnabled(true);
                     btnMic.setImageResource(R.drawable.mic_on);
                 }
@@ -176,11 +192,11 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         btnSend.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                보내는message = current_user_name+" : "+editMsg.getText().toString();
+                보내는message = current_user_name + " : " + editMsg.getText().toString();
                 // 비었는지 확인
                 if (!editMsg.getText().toString().equals("") && editMsg.getText().toString() != null) {
                     // 모든 Peer 에게 전송
-                    for(DataChannel dataChannel1 : dataChannels){
+                    for (DataChannel dataChannel1 : dataChannels) {
                         // utf-8 포맷 및 buffer 생성
                         // buffer 보내고 나면 초기화 됨 -> for 문 내부
                         ByteBuffer buffer = ByteBuffer.wrap(보내는message.getBytes(StandardCharsets.UTF_8));
@@ -233,6 +249,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             }
         });
     }
+
     /**
      * initial
      **/
@@ -250,6 +267,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         btnSend = binding.btnSendLiveStreaming;
         editMsg = binding.editMessageLiveStreaming;
     }
+
     private void initializeProperty() {
         /** Intent **/
         Intent intent = getIntent();
@@ -282,7 +300,8 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             requestPermissions();
         }
     }
-    private void socketIO(){
+
+    private void socketIO() {
         // PeerConnectionFactory 설정 (video track..)
         initializePeerConnection();
         initialize_camera();
@@ -293,9 +312,9 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
-        socket.emit("broadcaster", 방송방_id);
+        socket.emit(EVENT_BROADCASTER, 방송방_id);
         /** watcher **/
-        socket.on("watcher", args -> {
+        socket.on(EVENT_WATCHER, args -> {
             // watcher 의 id
             String watcher_id = (String) args[0];
             // PeerConnection 생성 및 addTrack
@@ -305,10 +324,10 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             createAndSetLocalDescription(watcher_id, peerConnection);
             // peerConnection 추가
             peerConnections.put(watcher_id, peerConnection);
-            
+
         });
         /** Candidate **/
-        socket.on("candidate", args -> {
+        socket.on(EVENT_CANDIDATE, args -> {
             // broadcaster id
             String id = (String) args[0];
             // candidate
@@ -324,7 +343,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             peerConnection.addIceCandidate(candidate);
         });
         /** Answer **/
-        socket.on("answer", args -> {
+        socket.on(EVENT_ANSWER, args -> {
             // watcher id
             String id = (String) args[0];
             // answer description from watcher
@@ -341,26 +360,27 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             }
         });
         /** disconnectPeer **/
-        socket.on("disconnectPeer", args -> {
+        socket.on(EVENT_disconnect, args -> {
             // 모든 peerconnection 종료 및 제거
-            for(PeerConnection peerConnection : peerConnections.values()){
+            for (PeerConnection peerConnection : peerConnections.values()) {
                 peerConnection.close();
             }
             peerConnections.clear();
         });
         /** finish **/
-        socket.on("finish", args -> {
+        socket.on(EVENT_FINISH, args -> {
             // watcher id
             String id = (String) args[0];
             // 모든 peerconnection 종료 및 제거
-            for(DataChannel dataChannel : dataChannels){
-                if(dataChannel.label().equals(id)){
+            for (DataChannel dataChannel : dataChannels) {
+                if (dataChannel.label().equals(id)) {
                     dataChannels.remove(dataChannel);
                     break;
                 }
             }
         });
     }
+
     private void initializePeerConnection() {
         /** PeerConnectionFactory 초기화 **/
         // 로컬 미디어 스트림 생성
@@ -386,7 +406,8 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                 .setVideoDecoderFactory(decoderFactory)
                 .createPeerConnectionFactory();
     }
-    private void initialize_camera(){
+
+    private void initialize_camera() {
         /** 비디오 설정 **/
         // EGL(OpenGL ES) : 렌더링 api 와 window 시스템을 연결해주는 인터페이스
         eglBase = EglBase.create();
@@ -396,7 +417,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         // 내 디바이스의 카메라에서 비디오 프레임 캡쳐
         // true : 전면,  false : 후면
         videoCapturer = createCameraCapturer(true);
-         // VideoSource (VideoCapturer 로 부터 생성)
+        // VideoSource (VideoCapturer 로 부터 생성)
         videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
         // videoCapturer 초기화
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.getCapturerObserver());
@@ -422,12 +443,13 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
 
         /** 비디오 띄우기 **/
         // renderer 이니셜라이즈
-        renderer.init(eglBase.getEglBaseContext(),null);
+        renderer.init(eglBase.getEglBaseContext(), null);
         // 비디오 트랙에 추가
         localVideoTrack.addSink(renderer);
         renderer.setMirror(true);
         /****/
     }
+
     private void switchCammera(boolean isfront) {
         // 카메라 종료 및 재생성
         releaseCamera();
@@ -447,8 +469,9 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
             }
         }
     };
+
     // 메서드
-    private void createCameraStream(boolean isfront){
+    private void createCameraStream(boolean isfront) {
         /** 비디오 설정 **/
         videoCapturer = createCameraCapturer(isfront);
         videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
@@ -470,9 +493,11 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         mediaStream.addTrack(localAudioTrack);
 
         /** stream **/
-        for (PeerConnection peerConnection : peerConnections.values()){
+        for (PeerConnection peerConnection : peerConnections.values()) {
             peerConnection.removeStream(mediaStream);
-            peerConnection.addStream(mediaStream);
+//            peerConnection.addStream(mediaStream);
+            peerConnection.addTrack(localVideoTrack);
+            peerConnection.addTrack(localAudioTrack);
         }
 
         /** 비디오 띄우기 **/
@@ -484,24 +509,23 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         // 초기화
         localVideoTrack = newVideoTrack;
     }
-    private void releaseCamera(){
+
+    private void releaseCamera() {
         videoCapturer.dispose();
         videoSource.dispose();
         mediaStream.dispose();
     }
 
-    /** PeerConnection 생성 **/
+    /**
+     * PeerConnection 생성
+     **/
     private PeerConnection createPeerConnection(Socket socket, String id) {
         // PeerConnection 생성
         PeerConnection peerConnection = peerConnectionFactory.createPeerConnection(iceServers, new PeerConnectionAdapter() {
             @Override
             public void onIceCandidate(IceCandidate iceCandidate) {
                 // icecandidate 수집시 서버에 전송
-                socket.emit("candidate", 방송방_id, id, iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp);
-            }
-            @Override
-            public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-//                System.out.println(iceConnectionState);
+                socket.emit(EVENT_CANDIDATE, 방송방_id, id, iceCandidate.sdpMid, iceCandidate.sdpMLineIndex, iceCandidate.sdp);
             }
         });
 
@@ -512,7 +536,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
 
         // DataChannel 초기화
         DataChannel dataChannel = peerConnection.createDataChannel(id, dcInit);
-        dataChannel.registerObserver(new datachannelobserver(){
+        dataChannel.registerObserver(new datachannelobserver() {
             @Override
             public void onMessage(DataChannel.Buffer buffer) {
                 super.onMessage(buffer);
@@ -529,51 +553,27 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                         // 각 Peer 로 부터 받은 메세지 ( UTF-8 포맷 )
                         String 받은message = new String(messageBytes, StandardCharsets.UTF_8);
 
-                        // 정규식
-                        // ^:시작, \s:공백, \n:개행, $:끝 14, \p{Punct}: 14개의 punctuation marks
-                        // 한글 : ㄱ-ㅎ, ㅏ-ㅣ, 가-힣
-                        String validCharsetPattern = "^[a-zA-Z0-9\\u3131-\\u314e|\\u314f-\\u3163|\\uac00-\\ud7a3\\p{Punct}\\s\\n]+$";
-                        Pattern pattern = Pattern.compile(validCharsetPattern);
-                        Matcher matcher = pattern.matcher(받은message);
-
-                        if (!matcher.matches()) {
-                            // 재전송 요청
-                            보내는message = "AGAIN";
+                        //각 watcher 에게 받은 message 다시 전송
+                        보내는message = 받은message;
+                        //Broadcaster : 모든 watcher 의 datachannel 을 관리
+                        for (DataChannel dataChannel1 : dataChannels) {
+                            // buffer 보내고 나면 초기화 됨
+                            // for 문 돌때마다 계속 생성해줘야 함
                             byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
                             ByteBuffer buffer = ByteBuffer.wrap(msg);
                             DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
 
-                            dataChannel.send(dataBuffer);
-                        }else if(받은message.equals("AGAIN")) {
-                            // 재전송
-                            byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
-                            ByteBuffer buffer = ByteBuffer.wrap(msg);
-                            DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
-
-                            dataChannel.send(dataBuffer);
-                        }else{
-                            //각 watcher 에게 받은 message 다시 전송
-                            보내는message = 받은message;
-                            //Broadcaster : 모든 watcher 의 datachannel 을 관리
-                            for(DataChannel dataChannel1 : dataChannels){
-                                // buffer 보내고 나면 초기화 됨
-                                // for 문 돌때마다 계속 생성해줘야 함
-                                byte[] msg = 보내는message.getBytes(StandardCharsets.UTF_8);
-                                ByteBuffer buffer = ByteBuffer.wrap(msg);
-                                DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
-
-                                dataChannel1.send(dataBuffer);
-                            }
-                            // Broadcaster 부분에도 추가
-                            textView.append(받은message + "\n");
-                            // 가장 아래로 내리기
-                            scrollview.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    scrollview.fullScroll(ScrollView.FOCUS_DOWN);
-                                }
-                            });
+                            dataChannel1.send(dataBuffer);
                         }
+                        // Broadcaster 부분에도 추가
+                        textView.append(받은message + "\n");
+                        // 가장 아래로 내리기
+                        scrollview.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                scrollview.fullScroll(ScrollView.FOCUS_DOWN);
+                            }
+                        });
                     }
                 });
             }
@@ -583,7 +583,9 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
 
 
         // Stream 추가
-        peerConnection.addStream(mediaStream);
+//        peerConnection.addStream(mediaStream);
+        peerConnection.addTrack(localVideoTrack);
+        peerConnection.addTrack(localAudioTrack);
 
         return peerConnection;
     }
@@ -596,7 +598,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                 // LocalDescription 설정
                 peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
                 // 서버에 만들어진 sdp 전송
-                socket.emit("offer", 방송방_id, id, sessionDescription.description);
+                socket.emit(EVENT_OFFER, 방송방_id, id, sessionDescription.description);
             }
         }, new MediaConstraints());
     }
@@ -605,51 +607,78 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
     // 간단한 SdpObserver 구현 클래스
     private static class SimpleSdpObserver implements SdpObserver {
         @Override
-        public void onCreateSuccess(SessionDescription sessionDescription) {}
+        public void onCreateSuccess(SessionDescription sessionDescription) {
+        }
+
         @Override
-        public void onSetSuccess() {}
+        public void onSetSuccess() {
+        }
+
         @Override
-        public void onCreateFailure(String s) {}
+        public void onCreateFailure(String s) {
+        }
+
         @Override
-        public void onSetFailure(String s) {}
+        public void onSetFailure(String s) {
+        }
     }
+
     private static class PeerConnectionAdapter implements PeerConnection.Observer {
         @Override
-        public void onSignalingChange(PeerConnection.SignalingState signalingState) {}
+        public void onSignalingChange(PeerConnection.SignalingState signalingState) {
+        }
+
         @Override
-        public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {}
+        public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
+        }
+
         @Override
-        public void onIceConnectionReceivingChange(boolean b) {}
+        public void onIceConnectionReceivingChange(boolean b) {
+        }
+
         @Override
-        public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {}
+        public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
+        }
+
         @Override
-        public void onIceCandidate(IceCandidate iceCandidate) {}
+        public void onIceCandidate(IceCandidate iceCandidate) {
+        }
+
         @Override
-        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {}
+        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
+        }
+
         @Override
-        public void onAddStream(MediaStream mediaStream) {}
+        public void onAddStream(MediaStream mediaStream) {
+        }
+
         @Override
-        public void onRemoveStream(MediaStream mediaStream) {}
+        public void onRemoveStream(MediaStream mediaStream) {
+        }
+
         @Override
-        public void onDataChannel(DataChannel dataChannel) {}
+        public void onDataChannel(DataChannel dataChannel) {
+        }
+
         @Override
-        public void onRenegotiationNeeded() {}
+        public void onRenegotiationNeeded() {
+        }
+
         @Override
-        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {}
+        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
+        }
     }
+
     private static class datachannelobserver implements DataChannel.Observer {
         @Override
-        public void onBufferedAmountChange(long l) {
-//            System.out.println("onBufferedAmountChange_datachannel");
-        }
+        public void onBufferedAmountChange(long l) {        }
         @Override
-        public void onStateChange() {
-//            System.out.println("onStateChange_datachannel");
-        }
+        public void onStateChange() {        }
         @Override
-        public void onMessage(DataChannel.Buffer buffer) {
-        }
-    };
+        public void onMessage(DataChannel.Buffer buffer) {        }
+    }
+
+    ;
     /******************************************************************/
 
     /**
@@ -718,9 +747,11 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         }
         return true;
     }
+
     private void requestPermissions() {
         ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, CAMERA_PERMISSION_REQUEST_CODE);
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);

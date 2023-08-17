@@ -78,9 +78,6 @@ public class Adapter_band_postList extends RecyclerView.Adapter<RecyclerView.Vie
                 이미지2 = String.valueOf(이미지_list.get(1)).trim();
                 이미지3 = String.valueOf(이미지_list.get(2)).trim();
 
-                Log.i("이미지1",이미지1);
-                Log.i("이미지1",이미지2);
-                Log.i("이미지1",이미지3);
                 StorageReference imagesRef1 = FirebaseCloudStorage.Storage_img(이미지1);
                 imagesRef1.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
                     @Override
@@ -106,8 +103,6 @@ public class Adapter_band_postList extends RecyclerView.Adapter<RecyclerView.Vie
                 이미지1 = String.valueOf(이미지_list.get(0)).trim();
                 이미지2 = String.valueOf(이미지_list.get(1)).trim();
 
-                Log.i("이미지1",이미지1);
-                Log.i("이미지1",이미지2);
                 StorageReference imagesRef1 = FirebaseCloudStorage.Storage_img(이미지1);
                 imagesRef1.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
                     @Override
@@ -128,7 +123,6 @@ public class Adapter_band_postList extends RecyclerView.Adapter<RecyclerView.Vie
             }else {
                 이미지1 = String.valueOf(이미지_list.get(0)).trim();
 
-                Log.i("이미지1",이미지1);
                 StorageReference imagesRef = FirebaseCloudStorage.Storage_img(이미지1);
                 imagesRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
                     @Override
@@ -145,11 +139,6 @@ public class Adapter_band_postList extends RecyclerView.Adapter<RecyclerView.Vie
             지난시간 = post_list.get(position).getUpdated_at();
             내용 = post_list.get(position).get게시글();
 
-            Log.i("A", String.valueOf(이미지_list.size()));
-            Log.i("A", String.valueOf(이미지_list));
-            Log.i("A", String.valueOf(이미지1));
-            Log.i("A", String.valueOf(이미지2));
-//        Log.i("A", String.valueOf(이미지1));
             /** layout 초기화 **/
             썸네일 = post_list.get(position).getThumnail_url();
 

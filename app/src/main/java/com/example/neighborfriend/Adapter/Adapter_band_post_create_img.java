@@ -72,16 +72,10 @@ public class Adapter_band_post_create_img extends RecyclerView.Adapter<Adapter_b
             imagesRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
                 @Override
                 public void onSuccess(Uri uri) {
-                    Log.i("ASdfasdfasdfadsfadfs", String.valueOf(uri));
                     Glide.with(holder.itemView).load(uri).into(holder.이미지);
                 }
             });
-
         }
-
-
-        Log.i("Asdfa", imguri);
-
     }
 
     // 작성여부의 true 갯수 만큼 view 만듦
@@ -112,7 +106,6 @@ public class Adapter_band_post_create_img extends RecyclerView.Adapter<Adapter_b
                     notifyItemRemoved(posi);
                     notifyItemRangeChanged(posi, imgList.size());
 
-                    Log.i("이미지리스트", imgList.toString());
 
                 }
             });

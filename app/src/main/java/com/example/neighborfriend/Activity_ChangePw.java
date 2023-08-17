@@ -136,7 +136,6 @@ public class Activity_ChangePw extends AppCompatActivity {
                 new com.android.volley.Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-//                        Log.i("a",response);
                         if(response.equals("2")) {
                             // 성공
                             finish();
