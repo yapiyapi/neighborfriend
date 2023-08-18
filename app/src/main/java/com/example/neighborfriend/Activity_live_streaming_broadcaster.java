@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -66,6 +67,7 @@ import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.RendererCommon;
 import org.webrtc.RtpReceiver;
+import org.webrtc.RtpSender;
 import org.webrtc.SdpObserver;
 import org.webrtc.SessionDescription;
 import org.webrtc.SoftwareVideoDecoderFactory;
@@ -73,6 +75,7 @@ import org.webrtc.SoftwareVideoEncoderFactory;
 import org.webrtc.SurfaceTextureHelper;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoCapturer;
+import org.webrtc.CameraVideoCapturer;
 import org.webrtc.VideoDecoderFactory;
 import org.webrtc.VideoEncoderFactory;
 import org.webrtc.VideoSource;
@@ -99,11 +102,10 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
     private ArrayList<DataChannel> dataChannels;
 
-    private MediaStream mediaStream;
     // 비디오
-    private VideoTrack localVideoTrack;
-    private VideoCapturer videoCapturer;
+    private CameraVideoCapturer videoCapturer;
     private VideoSource videoSource;
+    private VideoTrack localVideoTrack;
     // 오디오
     private AudioSource audioSource;
     private AudioTrack localAudioTrack;
@@ -184,8 +186,7 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         btnSwitchCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                switchCammera(camera_front_back);
-                camera_front_back = !camera_front_back;
+                videoCapturer.switchCamera(null);
             }
         });
         // datachannel 채팅
@@ -242,6 +243,17 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                         // Camera
                         releaseCamera();
                         finish();
+                        // 다른 Peer 에게 '방송 종료' 알림
+                        for (DataChannel dataChannel1 : dataChannels) {
+                            보내는message = "STREAMING_FINISH";
+                            // utf-8 포맷 및 buffer 생성
+                            ByteBuffer buffer = ByteBuffer.wrap(보내는message.getBytes(StandardCharsets.UTF_8));
+                            DataChannel.Buffer dataBuffer = new DataChannel.Buffer(buffer, false);
+
+                            // buffer 보내고 나면 초기화 됨
+                            // for 문 돌때마다 계속 생성해줘야 함
+                            dataChannel1.send(dataBuffer);
+                        }
                     }
                 });
                 builder.setNegativeButton("아니오", null);
@@ -424,21 +436,15 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         // 카메라로부터 비디오 캡쳐를 시작한다.
         videoCapturer.startCapture(240, 320, 30);  // width,height and fps
         // 비디오 트랙 생성
-        localVideoTrack = peerConnectionFactory.createVideoTrack("100", videoSource);
+        localVideoTrack = peerConnectionFactory.createVideoTrack("video", videoSource);
         /****/
 
         /** 오디오 설정 **/
         // AudioSource 및 AudioTrack 생성
         audioSource = peerConnectionFactory.createAudioSource(new MediaConstraints());
-        localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
+        localAudioTrack = peerConnectionFactory.createAudioTrack("audio", audioSource);
 //        localAudioTrack.setVolume(5); // audio volume
         localAudioTrack.setEnabled(true); // 오디오 트랙 활성화
-        /****/
-
-        /** mediaStream **/
-        mediaStream = peerConnectionFactory.createLocalMediaStream("mediaStream");
-        mediaStream.addTrack(localAudioTrack);
-        mediaStream.addTrack(localVideoTrack);
         /****/
 
         /** 비디오 띄우기 **/
@@ -450,70 +456,36 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
         /****/
     }
 
-    private void switchCammera(boolean isfront) {
-        // 카메라 종료 및 재생성
-        releaseCamera();
-        createCameraStream(isfront);
-    }
-
     // 화면 꺼졌을 때 event
     private final BroadcastReceiver screenStateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction() != null) {
-                if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
-                    releaseCamera();
-                } else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
-                    createCameraStream(!camera_front_back);
+                if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) { // 화면 off
+                    try {
+                        videoCapturer.stopCapture();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) { // 화면 on
+                    videoCapturer.startCapture(240, 320, 30);
                 }
             }
         }
     };
 
-    // 메서드
-    private void createCameraStream(boolean isfront) {
-        /** 비디오 설정 **/
-        videoCapturer = createCameraCapturer(isfront);
-        videoSource = peerConnectionFactory.createVideoSource(videoCapturer.isScreencast());
-        videoCapturer.initialize(surfaceTextureHelper, this, videoSource.getCapturerObserver());
-        videoCapturer.startCapture(240, 320, 30);
-        VideoTrack newVideoTrack = peerConnectionFactory.createVideoTrack("100", videoSource);
-
-        /** 오디오 설정 **/
-        // AudioSource 및 AudioTrack 생성
-        audioSource = peerConnectionFactory.createAudioSource(new MediaConstraints());
-        localAudioTrack = peerConnectionFactory.createAudioTrack("101", audioSource);
-//        localAudioTrack.setVolume(5); // audio volume
-        localAudioTrack.setEnabled(true); // 오디오 트랙 활성화
-
-        /** mediaStream **/
-        // 초기화
-        mediaStream = peerConnectionFactory.createLocalMediaStream("mediaStream");
-        mediaStream.addTrack(newVideoTrack);
-        mediaStream.addTrack(localAudioTrack);
-
-        /** stream **/
-        for (PeerConnection peerConnection : peerConnections.values()) {
-            peerConnection.removeStream(mediaStream);
-//            peerConnection.addStream(mediaStream);
-            peerConnection.addTrack(localVideoTrack);
-            peerConnection.addTrack(localAudioTrack);
-        }
-
-        /** 비디오 띄우기 **/
-        // 비디오 트랙에 추가
-        localVideoTrack.removeSink(renderer);
-        newVideoTrack.addSink(renderer);
-        renderer.setMirror(true);
-        /****/
-        // 초기화
-        localVideoTrack = newVideoTrack;
-    }
-
     private void releaseCamera() {
+        // video
         videoCapturer.dispose();
         videoSource.dispose();
-        mediaStream.dispose();
+        localVideoTrack.setEnabled(false);
+        localVideoTrack.dispose();
+        // audio
+        audioSource.dispose();
+        localAudioTrack.setEnabled(false);
+        localAudioTrack.dispose();
+        ///////////////////////////
+        // 방송 종료 시 마이크 활성화 오류 - 아직 해결 안됨..
     }
 
     /**
@@ -685,14 +657,14 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
      * 비디오
      **/
     // video capturer 생성하기
-    private VideoCapturer createCameraCapturer(boolean isFront) {
+    private CameraVideoCapturer createCameraCapturer(boolean isFront) {
 
         Camera2Enumerator enumerator = new Camera2Enumerator(this);
         final String[] deviceNames = enumerator.getDeviceNames();
 
         for (String deviceName : deviceNames) {
             if (isFront ? enumerator.isFrontFacing(deviceName) : enumerator.isBackFacing(deviceName)) {
-                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, new CameraVideoCapturer.CameraEventsHandler() {
+                CameraVideoCapturer cameraVideoCapturer = enumerator.createCapturer(deviceName, new CameraVideoCapturer.CameraEventsHandler() {
                     @Override
                     public void onCameraError(String s) {
                         Log.w("onCameraError", s);
@@ -724,8 +696,8 @@ public class Activity_live_streaming_broadcaster extends AppCompatActivity {
                     }
                 });
 
-                if (videoCapturer != null) {
-                    return videoCapturer;
+                if (cameraVideoCapturer != null) {
+                    return cameraVideoCapturer;
                 }
             }
         }

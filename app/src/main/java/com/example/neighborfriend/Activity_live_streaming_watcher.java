@@ -250,7 +250,7 @@ public class Activity_live_streaming_watcher extends AppCompatActivity {
                 super.onAddTrack(rtpReceiver, mediaStreams);
                 System.out.println("onAddTrack");
 
-                if(rtpReceiver.track().id().equals("100")){ // Video
+                if(rtpReceiver.track().id().equals("video")){ // Video
                     VideoTrack remoteVideoTrack_f = (VideoTrack) rtpReceiver.track();
 
                     // 비디오 출력
